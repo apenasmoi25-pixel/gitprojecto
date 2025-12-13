@@ -12,11 +12,8 @@
         <div class="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Calculadora de Água e Luz</h1>
-                <p class="text-sm md:text-base text-gray-600 mb-4">Sistema centralizado - Dados partilhados</p>
+                <p class="text-sm md:text-base text-gray-600 mb-4">Gestão de contadores com cálculo automático</p>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="atualizarDados()" class="flex-1 md:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">
-                        🔄 Atualizar
-                    </button>
                     <button onclick="exportarDados()" class="flex-1 md:flex-none bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
                         ⬇️ Exportar
                     </button>
@@ -24,8 +21,8 @@
                         ⬆️ Importar
                         <input type="file" id="importFile" accept=".json" onchange="importarDados(event)" class="hidden">
                     </label>
-                    <button onclick="sincronizarNuvem()" class="flex-1 md:flex-none bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700">
-                        ☁️ Sincronizar
+                    <button onclick="limparTudo()" class="flex-1 md:flex-none bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-700">
+                        🗑️ Limpar Tudo
                     </button>
                 </div>
             </div>
@@ -33,7 +30,7 @@
 
         <!-- Aviso -->
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-            <p class="text-blue-800"><strong>ℹ️ Atenção:</strong> Esta aplicação utiliza armazenamento local. Para compartilhar entre dispositivos, use "Sincronizar".</p>
+            <p class="text-blue-800 text-sm"><strong>ℹ️ Nota:</strong> Os dados ficam guardados no seu navegador. Use Exportar/Importar para fazer backup ou partilhar dados.</p>
         </div>
 
         <!-- Tabs -->
@@ -53,17 +50,17 @@
                 </button>
             </div>
 
-            <div class="p-6">
+            <div class="p-4 md:p-6">
                 <!-- Tab Contadores -->
                 <div id="content-contadores">
                     <div class="space-y-8">
                         <!-- Contadores Água -->
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">💧 Contadores de Água</h2>
+                            <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💧 Contadores de Água</h2>
                             <div id="lista-agua" class="space-y-3 mb-4"></div>
                             <div class="flex gap-2">
-                                <input type="text" id="nova-agua" placeholder="Descrição do novo contador de água" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
-                                <button onclick="adicionarContadorAgua()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700">
+                                <input type="text" id="nova-agua" placeholder="Nome do contador" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
+                                <button onclick="adicionarContadorAgua()" class="bg-blue-600 text-white px-4 md:px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-blue-700 whitespace-nowrap">
                                     ➕ Adicionar
                                 </button>
                             </div>
@@ -71,11 +68,11 @@
 
                         <!-- Contadores Luz -->
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">⚡ Contadores de Luz</h2>
+                            <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">⚡ Contadores de Luz</h2>
                             <div id="lista-luz" class="space-y-3 mb-4"></div>
                             <div class="flex gap-2">
-                                <input type="text" id="nova-luz" placeholder="Descrição do novo contador de luz" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
-                                <button onclick="adicionarContadorLuz()" class="bg-yellow-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-700">
+                                <input type="text" id="nova-luz" placeholder="Nome do contador" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
+                                <button onclick="adicionarContadorLuz()" class="bg-yellow-600 text-white px-4 md:px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-yellow-700 whitespace-nowrap">
                                     ➕ Adicionar
                                 </button>
                             </div>
@@ -85,18 +82,18 @@
 
                 <!-- Tab Leituras -->
                 <div id="content-leituras" class="hidden">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Registar Leitura Mensal</h2>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">Registar Leitura Mensal</h2>
                     <div class="mb-6">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Data da Leitura</label>
                         <input type="date" id="data-leitura" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-blue-50 rounded-lg p-4">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">💧 Água (m³)</h3>
+                            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">💧 Água (m³)</h3>
                             <div id="inputs-agua" class="space-y-3"></div>
                         </div>
                         <div class="bg-yellow-50 rounded-lg p-4">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">⚡ Luz (kWh)</h3>
+                            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">⚡ Luz (kWh)</h3>
                             <div id="inputs-luz" class="space-y-3"></div>
                         </div>
                     </div>
@@ -108,7 +105,7 @@
 
                 <!-- Tab Faturas -->
                 <div id="content-faturas" class="hidden">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Registar Fatura Mensal</h2>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">Registar Fatura Mensal</h2>
                     <div class="max-w-2xl mx-auto">
                         <div class="mb-6">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Mês de Referência</label>
@@ -131,29 +128,8 @@
 
                 <!-- Tab Cálculos -->
                 <div id="content-calculos" class="hidden">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Cálculo de Consumos e Custos</h2>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">Cálculo de Consumos e Custos</h2>
                     <div id="resultados-calculos"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal para sincronização -->
-        <div id="sync-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">Sincronização de Dados</h3>
-                <div id="sync-content">
-                    <div class="mb-4">
-                        <p class="text-gray-600 mb-2">Código de Sincronização:</p>
-                        <div class="flex gap-2">
-                            <input type="text" id="sync-code" placeholder="Gerar ou colar código" class="flex-1 border rounded-lg px-3 py-2">
-                            <button onclick="gerarCodigoSinc()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Gerar</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="enviarParaNuvem()" class="flex-1 bg-green-600 text-white py-2 rounded-lg">Enviar</button>
-                        <button onclick="receberDaNuvem()" class="flex-1 bg-purple-600 text-white py-2 rounded-lg">Receber</button>
-                        <button onclick="fecharModalSync()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg">Cancelar</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -179,19 +155,12 @@
         // Carregar dados do localStorage
         function carregarDados() {
             try {
-                const aguaData = localStorage.getItem('contadores-agua');
-                if (aguaData) dados.contadoresAgua = JSON.parse(aguaData);
-
-                const luzData = localStorage.getItem('contadores-luz');
-                if (luzData) dados.contadoresLuz = JSON.parse(luzData);
-
-                const leiturasData = localStorage.getItem('leituras');
-                if (leiturasData) dados.leituras = JSON.parse(leiturasData);
-
-                const faturasData = localStorage.getItem('faturas');
-                if (faturasData) dados.faturas = JSON.parse(faturasData);
+                const dadosGuardados = localStorage.getItem('calculadora-agua-luz');
+                if (dadosGuardados) {
+                    dados = JSON.parse(dadosGuardados);
+                }
             } catch (e) {
-                console.log('Primeira vez a usar a aplicação');
+                console.log('Erro ao carregar dados');
             }
             renderizar();
         }
@@ -199,13 +168,10 @@
         // Guardar dados no localStorage
         function guardarDados() {
             try {
-                localStorage.setItem('contadores-agua', JSON.stringify(dados.contadoresAgua));
-                localStorage.setItem('contadores-luz', JSON.stringify(dados.contadoresLuz));
-                localStorage.setItem('leituras', JSON.stringify(dados.leituras));
-                localStorage.setItem('faturas', JSON.stringify(dados.faturas));
+                localStorage.setItem('calculadora-agua-luz', JSON.stringify(dados));
                 return true;
             } catch (e) {
-                alert('Erro ao guardar dados. O navegador pode estar em modo privado.');
+                alert('Erro ao guardar dados. Verifique o espaço disponível no navegador.');
                 return false;
             }
         }
@@ -232,6 +198,7 @@
             if (guardarDados()) {
                 input.value = '';
                 renderizar();
+                alert('Contador adicionado!');
             }
         }
 
@@ -244,6 +211,7 @@
             if (guardarDados()) {
                 input.value = '';
                 renderizar();
+                alert('Contador adicionado!');
             }
         }
 
@@ -254,6 +222,7 @@
             dados.contadoresAgua = dados.contadoresAgua.filter(c => c.id !== id);
             if (guardarDados()) {
                 renderizar();
+                alert('Contador removido!');
             }
         }
 
@@ -263,6 +232,7 @@
             dados.contadoresLuz = dados.contadoresLuz.filter(c => c.id !== id);
             if (guardarDados()) {
                 renderizar();
+                alert('Contador removido!');
             }
         }
 
@@ -280,8 +250,8 @@
                 valor: parseFloat(document.getElementById(`leitura-luz-${c.id}`).value || 0)
             }));
 
-            if (leituraAgua.some(l => isNaN(l.valor)) || leituraLuz.some(l => isNaN(l.valor))) {
-                return alert('Preencha todas as leituras com valores numéricos');
+            if (leituraAgua.some(l => !l.valor) || leituraLuz.some(l => !l.valor)) {
+                return alert('Preencha todas as leituras');
             }
 
             const novaLeitura = {
@@ -293,6 +263,7 @@
 
             dados.leituras.push(novaLeitura);
             dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
+            
             if (guardarDados()) {
                 alert('Leitura registada!');
                 renderizar();
@@ -305,22 +276,17 @@
             const agua = parseFloat(document.getElementById('valor-agua').value);
             const luz = parseFloat(document.getElementById('valor-luz').value);
 
-            if (isNaN(agua) || isNaN(luz)) return alert('Preencha os valores com números válidos');
+            if (!agua || !luz) return alert('Preencha os valores');
 
             dados.faturas.push({ id: Date.now(), mes, agua, luz });
             dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
+            
             if (guardarDados()) {
                 document.getElementById('valor-agua').value = '';
                 document.getElementById('valor-luz').value = '';
                 alert('Fatura registada!');
                 renderizar();
             }
-        }
-
-        // Atualizar dados
-        function atualizarDados() {
-            carregarDados();
-            alert('Dados atualizados!');
         }
 
         // Exportar
@@ -330,7 +296,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `calculadora-agua-luz-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -346,14 +312,31 @@
                     if (!confirm('Substituir dados atuais?')) return;
                     dados = importado;
                     if (guardarDados()) {
-                        alert('Dados importados com sucesso!');
+                        alert('Dados importados!');
                         renderizar();
                     }
                 } catch (err) {
-                    alert('Ficheiro inválido ou corrompido');
+                    alert('Ficheiro inválido');
                 }
             };
             reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        // Limpar tudo
+        function limparTudo() {
+            if (!confirm('ATENÇÃO: Isto irá apagar TODOS os dados permanentemente. Tem certeza?')) return;
+            if (!confirm('Última confirmação: Apagar tudo mesmo?')) return;
+            localStorage.removeItem('calculadora-agua-luz');
+            dados = {
+                contadoresAgua: [{ id: 1, descricao: 'Contador Água 1' }],
+                contadoresLuz: [{ id: 1, descricao: 'Contador Luz 1' }],
+                leituras: [],
+                faturas: []
+            };
+            guardarDados();
+            renderizar();
+            alert('Todos os dados foram apagados!');
         }
 
         // Renderizar inputs de leituras
@@ -416,125 +399,80 @@
 
             const custosAgua = consumosAgua.map(c => ({
                 ...c,
-                custo: totalAgua > 0 ? (c.consumo / totalAgua) * fatura.agua : 0
+                custo: (c.consumo / totalAgua) * fatura.agua
             }));
 
             const custosLuz = consumosLuz.map(c => ({
                 ...c,
-                custo: totalLuz > 0 ? (c.consumo / totalLuz) * fatura.luz : 0
+                custo: (c.consumo / totalLuz) * fatura.luz
             }));
 
             div.innerHTML = `
                 <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                    <p class="text-indigo-800 font-semibold">Período: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}</p>
+                    <p class="text-indigo-800 font-semibold text-sm md:text-base">Período: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-blue-50 rounded-lg p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">💧 Água</h3>
+                    <div class="bg-blue-50 rounded-lg p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">💧 Água</h3>
                         <div class="space-y-3">
                             ${custosAgua.map(item => `
                                 <div class="bg-white rounded-lg p-3">
-                                    <p class="font-semibold text-gray-800">${item.descricao}</p>
-                                    <p class="text-blue-600 font-bold text-lg">${item.consumo.toFixed(3)} m³</p>
-                                    <p class="text-gray-700">${item.custo.toFixed(2)} €</p>
+                                    <p class="font-semibold text-gray-800 text-sm md:text-base">${item.descricao}</p>
+                                    <p class="text-blue-600 font-bold text-lg md:text-xl">${item.consumo.toFixed(3)} m³</p>
+                                    <p class="text-gray-700 text-sm md:text-base">${item.custo.toFixed(2)} €</p>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                    <div class="bg-yellow-50 rounded-lg p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">⚡ Luz</h3>
+                    <div class="bg-yellow-50 rounded-lg p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">⚡ Luz</h3>
                         <div class="space-y-3">
                             ${custosLuz.map(item => `
                                 <div class="bg-white rounded-lg p-3">
-                                    <p class="font-semibold text-gray-800">${item.descricao}</p>
-                                    <p class="text-yellow-600 font-bold text-lg">${item.consumo.toFixed(3)} kWh</p>
-                                    <p class="text-gray-700">${item.custo.toFixed(2)} €</p>
+                                    <p class="font-semibold text-gray-800 text-sm md:text-base">${item.descricao}</p>
+                                    <p class="text-yellow-600 font-bold text-lg md:text-xl">${item.consumo.toFixed(3)} kWh</p>
+                                    <p class="text-gray-700 text-sm md:text-base">${item.custo.toFixed(2)} €</p>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-100 border border-gray-300 rounded-lg p-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Totais Gerais</h3>
+                <div class="bg-gray-100 border border-gray-300 rounded-lg p-4 md:p-6">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Totais Gerais</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <p class="text-sm text-gray-600">Água Total</p>
-                            <p class="text-xl font-bold text-blue-600">${totalAgua.toFixed(3)} m³</p>
-                            <p class="text-lg text-gray-700">${fatura.agua.toFixed(2)} €</p>
+                            <p class="text-xs md:text-sm text-gray-600">Água Total</p>
+                            <p class="text-lg md:text-xl font-bold text-blue-600">${totalAgua.toFixed(3)} m³</p>
+                            <p class="text-base md:text-lg text-gray-700">${fatura.agua.toFixed(2)} €</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-600">Luz Total</p>
-                            <p class="text-xl font-bold text-yellow-600">${totalLuz.toFixed(3)} kWh</p>
-                            <p class="text-lg text-gray-700">${fatura.luz.toFixed(2)} €</p>
+                            <p class="text-xs md:text-sm text-gray-600">Luz Total</p>
+                            <p class="text-lg md:text-xl font-bold text-yellow-600">${totalLuz.toFixed(3)} kWh</p>
+                            <p class="text-base md:text-lg text-gray-700">${fatura.luz.toFixed(2)} €</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-600">Custo Total</p>
-                            <p class="text-2xl font-bold text-indigo-600">${(fatura.agua + fatura.luz).toFixed(2)} €</p>
+                            <p class="text-xs md:text-sm text-gray-600">Custo Total</p>
+                            <p class="text-xl md:text-2xl font-bold text-indigo-600">${(fatura.agua + fatura.luz).toFixed(2)} €</p>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        // Funções de sincronização (simuladas)
-        function sincronizarNuvem() {
-            document.getElementById('sync-modal').classList.remove('hidden');
-        }
-
-        function fecharModalSync() {
-            document.getElementById('sync-modal').classList.add('hidden');
-        }
-
-        function gerarCodigoSinc() {
-            const codigo = Math.random().toString(36).substring(2, 10).toUpperCase();
-            document.getElementById('sync-code').value = codigo;
-            localStorage.setItem('sync-code', codigo);
-            localStorage.setItem('sync-data', JSON.stringify(dados));
-        }
-
-        function enviarParaNuvem() {
-            const codigo = document.getElementById('sync-code').value.trim();
-            if (!codigo) return alert('Digite ou gere um código');
-            
-            // Simular envio para nuvem
-            localStorage.setItem(`sync-cloud-${codigo}`, JSON.stringify(dados));
-            localStorage.setItem('last-sync', new Date().toISOString());
-            alert('Dados enviados para sincronização!');
-            fecharModalSync();
-        }
-
-        function receberDaNuvem() {
-            const codigo = document.getElementById('sync-code').value.trim();
-            if (!codigo) return alert('Digite o código de sincronização');
-            
-            // Simular recebimento da nuvem
-            const cloudData = localStorage.getItem(`sync-cloud-${codigo}`);
-            if (!cloudData) return alert('Código inválido ou dados não encontrados');
-            
-            if (confirm('Substituir dados locais pelos da nuvem?')) {
-                dados = JSON.parse(cloudData);
-                if (guardarDados()) {
-                    alert('Dados sincronizados com sucesso!');
-                    renderizar();
-                    fecharModalSync();
-                }
-            }
-        }
-
         // Renderizar tudo
         function renderizar() {
             // Contadores Água
             document.getElementById('lista-agua').innerHTML = dados.contadoresAgua.map(c => `
-                <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <span class="font-semibold text-gray-800">${c.descricao}</span>
+                <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
+                    <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
                     <button onclick="removerContadorAgua(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
                 </div>
             `).join('');
 
             // Contadores Luz
             document.getElementById('lista-luz').innerHTML = dados.contadoresLuz.map(c => `
-                <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <span class="font-semibold text-gray-800">${c.descricao}</span>
+                <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
+                    <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
                     <button onclick="removerContadorLuz(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
                 </div>
             `).join('');
@@ -542,12 +480,12 @@
             // Histórico Leituras
             if (dados.leituras.length > 0) {
                 document.getElementById('historico-leituras').innerHTML = `
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Histórico</h3>
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
                     <div class="space-y-3">
                         ${dados.leituras.map(l => `
-                            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                                <p class="font-bold text-gray-800 mb-3">${new Date(l.data).toLocaleDateString('pt-PT')}</p>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
+                                <p class="font-bold text-gray-800 mb-3 text-sm md:text-base">${new Date(l.data).toLocaleDateString('pt-PT')}</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs md:text-sm">
                                     <div>
                                         <p class="font-semibold text-blue-600 mb-2">Água:</p>
                                         ${l.agua.map(a => `<p class="text-gray-600">${a.descricao}: ${a.valor.toFixed(3)} m³</p>`).join('')}
@@ -561,29 +499,25 @@
                         `).join('')}
                     </div>
                 `;
-            } else {
-                document.getElementById('historico-leituras').innerHTML = '';
             }
 
             // Histórico Faturas
             if (dados.faturas.length > 0) {
                 document.getElementById('historico-faturas').innerHTML = `
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Histórico</h3>
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
                     <div class="space-y-3 max-w-2xl mx-auto">
                         ${dados.faturas.map(f => `
-                            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                                <p class="font-bold text-gray-800 mb-2">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
+                                <p class="font-bold text-gray-800 mb-2 text-sm md:text-base">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
+                                <div class="grid grid-cols-2 gap-4 text-xs md:text-sm">
                                     <p class="text-gray-600">Água: ${f.agua.toFixed(2)} €</p>
                                     <p class="text-gray-600">Luz: ${f.luz.toFixed(2)} €</p>
                                 </div>
-                                <p class="font-bold text-indigo-600 mt-2">Total: ${(f.agua + f.luz).toFixed(2)} €</p>
+                                <p class="font-bold text-indigo-600 mt-2 text-sm md:text-base">Total: ${(f.agua + f.luz).toFixed(2)} €</p>
                             </div>
                         `).join('')}
                     </div>
                 `;
-            } else {
-                document.getElementById('historico-faturas').innerHTML = '';
             }
         }
     </script>
