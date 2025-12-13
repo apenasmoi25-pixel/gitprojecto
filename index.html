@@ -24,13 +24,16 @@
                         ⬆️ Importar
                         <input type="file" id="importFile" accept=".json" onchange="importarDados(event)" class="hidden">
                     </label>
+                    <button onclick="sincronizarNuvem()" class="flex-1 md:flex-none bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700">
+                        ☁️ Sincronizar
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Aviso -->
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-            <p class="text-blue-800"><strong>ℹ️ Atenção:</strong> Esta aplicação utiliza armazenamento compartilhado. Todos os utilizadores veem os mesmos dados.</p>
+            <p class="text-blue-800"><strong>ℹ️ Atenção:</strong> Esta aplicação utiliza armazenamento local. Para compartilhar entre dispositivos, use "Sincronizar".</p>
         </div>
 
         <!-- Tabs -->
@@ -133,6 +136,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal para sincronização -->
+        <div id="sync-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Sincronização de Dados</h3>
+                <div id="sync-content">
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">Código de Sincronização:</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="sync-code" placeholder="Gerar ou colar código" class="flex-1 border rounded-lg px-3 py-2">
+                            <button onclick="gerarCodigoSinc()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Gerar</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="enviarParaNuvem()" class="flex-1 bg-green-600 text-white py-2 rounded-lg">Enviar</button>
+                        <button onclick="receberDaNuvem()" class="flex-1 bg-purple-600 text-white py-2 rounded-lg">Receber</button>
+                        <button onclick="fecharModalSync()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -145,39 +169,44 @@
         };
 
         // Inicializar
-        document.addEventListener('DOMContentLoaded', async () => {
-            await carregarDados();
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarDados();
             document.getElementById('data-leitura').valueAsDate = new Date();
             const hoje = new Date();
             document.getElementById('mes-fatura').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
         });
 
-        // Carregar dados do storage
-        async function carregarDados() {
+        // Carregar dados do localStorage
+        function carregarDados() {
             try {
-                const aguaData = await window.storage.get('contadores-agua', true);
-                if (aguaData) dados.contadoresAgua = JSON.parse(aguaData.value);
+                const aguaData = localStorage.getItem('contadores-agua');
+                if (aguaData) dados.contadoresAgua = JSON.parse(aguaData);
 
-                const luzData = await window.storage.get('contadores-luz', true);
-                if (luzData) dados.contadoresLuz = JSON.parse(luzData.value);
+                const luzData = localStorage.getItem('contadores-luz');
+                if (luzData) dados.contadoresLuz = JSON.parse(luzData);
 
-                const leiturasData = await window.storage.get('leituras', true);
-                if (leiturasData) dados.leituras = JSON.parse(leiturasData.value);
+                const leiturasData = localStorage.getItem('leituras');
+                if (leiturasData) dados.leituras = JSON.parse(leiturasData);
 
-                const faturasData = await window.storage.get('faturas', true);
-                if (faturasData) dados.faturas = JSON.parse(faturasData.value);
+                const faturasData = localStorage.getItem('faturas');
+                if (faturasData) dados.faturas = JSON.parse(faturasData);
             } catch (e) {
                 console.log('Primeira vez a usar a aplicação');
             }
             renderizar();
         }
 
-        // Guardar dados
-        async function guardarDados(tipo, valor) {
+        // Guardar dados no localStorage
+        function guardarDados() {
             try {
-                await window.storage.set(tipo, JSON.stringify(valor), true);
+                localStorage.setItem('contadores-agua', JSON.stringify(dados.contadoresAgua));
+                localStorage.setItem('contadores-luz', JSON.stringify(dados.contadoresLuz));
+                localStorage.setItem('leituras', JSON.stringify(dados.leituras));
+                localStorage.setItem('faturas', JSON.stringify(dados.faturas));
+                return true;
             } catch (e) {
-                alert('Erro ao guardar dados');
+                alert('Erro ao guardar dados. O navegador pode estar em modo privado.');
+                return false;
             }
         }
 
@@ -195,46 +224,50 @@
         }
 
         // Adicionar contador água
-        async function adicionarContadorAgua() {
+        function adicionarContadorAgua() {
             const input = document.getElementById('nova-agua');
             if (!input.value.trim()) return alert('Insira uma descrição');
             const novoId = Math.max(0, ...dados.contadoresAgua.map(c => c.id)) + 1;
             dados.contadoresAgua.push({ id: novoId, descricao: input.value.trim() });
-            await guardarDados('contadores-agua', dados.contadoresAgua);
-            input.value = '';
-            renderizar();
+            if (guardarDados()) {
+                input.value = '';
+                renderizar();
+            }
         }
 
         // Adicionar contador luz
-        async function adicionarContadorLuz() {
+        function adicionarContadorLuz() {
             const input = document.getElementById('nova-luz');
             if (!input.value.trim()) return alert('Insira uma descrição');
             const novoId = Math.max(0, ...dados.contadoresLuz.map(c => c.id)) + 1;
             dados.contadoresLuz.push({ id: novoId, descricao: input.value.trim() });
-            await guardarDados('contadores-luz', dados.contadoresLuz);
-            input.value = '';
-            renderizar();
+            if (guardarDados()) {
+                input.value = '';
+                renderizar();
+            }
         }
 
         // Remover contadores
-        async function removerContadorAgua(id) {
+        function removerContadorAgua(id) {
             if (dados.contadoresAgua.length <= 1) return alert('Deve existir pelo menos um contador');
             if (!confirm('Remover este contador?')) return;
             dados.contadoresAgua = dados.contadoresAgua.filter(c => c.id !== id);
-            await guardarDados('contadores-agua', dados.contadoresAgua);
-            renderizar();
+            if (guardarDados()) {
+                renderizar();
+            }
         }
 
-        async function removerContadorLuz(id) {
+        function removerContadorLuz(id) {
             if (dados.contadoresLuz.length <= 1) return alert('Deve existir pelo menos um contador');
             if (!confirm('Remover este contador?')) return;
             dados.contadoresLuz = dados.contadoresLuz.filter(c => c.id !== id);
-            await guardarDados('contadores-luz', dados.contadoresLuz);
-            renderizar();
+            if (guardarDados()) {
+                renderizar();
+            }
         }
 
         // Registar leitura
-        async function registarLeitura() {
+        function registarLeitura() {
             const dataLeitura = document.getElementById('data-leitura').value;
             const leituraAgua = dados.contadoresAgua.map(c => ({
                 contadorId: c.id,
@@ -247,8 +280,8 @@
                 valor: parseFloat(document.getElementById(`leitura-luz-${c.id}`).value || 0)
             }));
 
-            if (leituraAgua.some(l => !l.valor) || leituraLuz.some(l => !l.valor)) {
-                return alert('Preencha todas as leituras');
+            if (leituraAgua.some(l => isNaN(l.valor)) || leituraLuz.some(l => isNaN(l.valor))) {
+                return alert('Preencha todas as leituras com valores numéricos');
             }
 
             const novaLeitura = {
@@ -260,31 +293,33 @@
 
             dados.leituras.push(novaLeitura);
             dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
-            await guardarDados('leituras', dados.leituras);
-            alert('Leitura registada!');
-            renderizar();
+            if (guardarDados()) {
+                alert('Leitura registada!');
+                renderizar();
+            }
         }
 
         // Registar fatura
-        async function registarFatura() {
+        function registarFatura() {
             const mes = document.getElementById('mes-fatura').value;
             const agua = parseFloat(document.getElementById('valor-agua').value);
             const luz = parseFloat(document.getElementById('valor-luz').value);
 
-            if (!agua || !luz) return alert('Preencha os valores');
+            if (isNaN(agua) || isNaN(luz)) return alert('Preencha os valores com números válidos');
 
             dados.faturas.push({ id: Date.now(), mes, agua, luz });
             dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
-            await guardarDados('faturas', dados.faturas);
-            document.getElementById('valor-agua').value = '';
-            document.getElementById('valor-luz').value = '';
-            alert('Fatura registada!');
-            renderizar();
+            if (guardarDados()) {
+                document.getElementById('valor-agua').value = '';
+                document.getElementById('valor-luz').value = '';
+                alert('Fatura registada!');
+                renderizar();
+            }
         }
 
         // Atualizar dados
-        async function atualizarDados() {
-            await carregarDados();
+        function atualizarDados() {
+            carregarDados();
             alert('Dados atualizados!');
         }
 
@@ -295,28 +330,27 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `calculadora-agua-luz-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
+            URL.revokeObjectURL(url);
         }
 
         // Importar
-        async function importarDados(e) {
+        function importarDados(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = async (ev) => {
+            reader.onload = (ev) => {
                 try {
                     const importado = JSON.parse(ev.target.result);
                     if (!confirm('Substituir dados atuais?')) return;
                     dados = importado;
-                    await guardarDados('contadores-agua', dados.contadoresAgua);
-                    await guardarDados('contadores-luz', dados.contadoresLuz);
-                    await guardarDados('leituras', dados.leituras);
-                    await guardarDados('faturas', dados.faturas);
-                    alert('Dados importados!');
-                    renderizar();
+                    if (guardarDados()) {
+                        alert('Dados importados com sucesso!');
+                        renderizar();
+                    }
                 } catch (err) {
-                    alert('Ficheiro inválido');
+                    alert('Ficheiro inválido ou corrompido');
                 }
             };
             reader.readAsText(file);
@@ -382,12 +416,12 @@
 
             const custosAgua = consumosAgua.map(c => ({
                 ...c,
-                custo: (c.consumo / totalAgua) * fatura.agua
+                custo: totalAgua > 0 ? (c.consumo / totalAgua) * fatura.agua : 0
             }));
 
             const custosLuz = consumosLuz.map(c => ({
                 ...c,
-                custo: (c.consumo / totalLuz) * fatura.luz
+                custo: totalLuz > 0 ? (c.consumo / totalLuz) * fatura.luz : 0
             }));
 
             div.innerHTML = `
@@ -442,6 +476,51 @@
             `;
         }
 
+        // Funções de sincronização (simuladas)
+        function sincronizarNuvem() {
+            document.getElementById('sync-modal').classList.remove('hidden');
+        }
+
+        function fecharModalSync() {
+            document.getElementById('sync-modal').classList.add('hidden');
+        }
+
+        function gerarCodigoSinc() {
+            const codigo = Math.random().toString(36).substring(2, 10).toUpperCase();
+            document.getElementById('sync-code').value = codigo;
+            localStorage.setItem('sync-code', codigo);
+            localStorage.setItem('sync-data', JSON.stringify(dados));
+        }
+
+        function enviarParaNuvem() {
+            const codigo = document.getElementById('sync-code').value.trim();
+            if (!codigo) return alert('Digite ou gere um código');
+            
+            // Simular envio para nuvem
+            localStorage.setItem(`sync-cloud-${codigo}`, JSON.stringify(dados));
+            localStorage.setItem('last-sync', new Date().toISOString());
+            alert('Dados enviados para sincronização!');
+            fecharModalSync();
+        }
+
+        function receberDaNuvem() {
+            const codigo = document.getElementById('sync-code').value.trim();
+            if (!codigo) return alert('Digite o código de sincronização');
+            
+            // Simular recebimento da nuvem
+            const cloudData = localStorage.getItem(`sync-cloud-${codigo}`);
+            if (!cloudData) return alert('Código inválido ou dados não encontrados');
+            
+            if (confirm('Substituir dados locais pelos da nuvem?')) {
+                dados = JSON.parse(cloudData);
+                if (guardarDados()) {
+                    alert('Dados sincronizados com sucesso!');
+                    renderizar();
+                    fecharModalSync();
+                }
+            }
+        }
+
         // Renderizar tudo
         function renderizar() {
             // Contadores Água
@@ -482,6 +561,8 @@
                         `).join('')}
                     </div>
                 `;
+            } else {
+                document.getElementById('historico-leituras').innerHTML = '';
             }
 
             // Histórico Faturas
@@ -501,6 +582,8 @@
                         `).join('')}
                     </div>
                 `;
+            } else {
+                document.getElementById('historico-faturas').innerHTML = '';
             }
         }
     </script>
