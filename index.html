@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Água e Luz</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
     <div class="max-w-6xl mx-auto">
@@ -12,17 +16,65 @@
         <div class="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Calculadora de Água e Luz</h1>
-                <p class="text-sm md:text-base text-gray-600 mb-4">Gestão de contadores com cálculo automático</p>
+                <p class="text-sm md:text-base text-gray-600 mb-4">
+                    <span id="status-conexao" class="font-semibold">🔴 Não configurado</span>
+                </p>
                 <div class="flex flex-wrap gap-2">
+                    <button onclick="sincronizar()" class="flex-1 md:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">
+                        🔄 Sincronizar
+                    </button>
                     <button onclick="exportarDados()" class="flex-1 md:flex-none bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
                         ⬇️ Exportar
                     </button>
-                    <label class="flex-1 md:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 cursor-pointer text-center">
-                        ⬆️ Importar
-                        <input type="file" id="importFile" accept=".json" onchange="importarDados(event)" class="hidden">
-                    </label>
-                    <button onclick="limparTudo()" class="flex-1 md:flex-none bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-700">
-                        🗑️ Limpar Tudo
+                    <button onclick="mostrarConfig()" class="flex-1 md:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">
+                        ⚙️ Configurar Firebase
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Configuração Firebase -->
+        <div id="modal-config" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Configurar Firebase</h2>
+                <p class="text-sm text-gray-600 mb-4">Cole aqui as suas credenciais do Firebase:</p>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">apiKey</label>
+                    <input type="text" id="config-apiKey" placeholder="AIza..." class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">authDomain</label>
+                    <input type="text" id="config-authDomain" placeholder="seu-projeto.firebaseapp.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">projectId</label>
+                    <input type="text" id="config-projectId" placeholder="seu-projeto" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">storageBucket</label>
+                    <input type="text" id="config-storageBucket" placeholder="seu-projeto.appspot.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">messagingSenderId</label>
+                    <input type="text" id="config-messagingSenderId" placeholder="123456789" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">appId</label>
+                    <input type="text" id="config-appId" placeholder="1:123456789:web:abc123" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="salvarConfig()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700">
+                        💾 Guardar e Conectar
+                    </button>
+                    <button onclick="fecharConfig()" class="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700">
+                        ❌ Cancelar
                     </button>
                 </div>
             </div>
@@ -30,7 +82,9 @@
 
         <!-- Aviso -->
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-            <p class="text-blue-800 text-sm"><strong>ℹ️ Nota:</strong> Os dados ficam guardados no seu navegador. Use Exportar/Importar para fazer backup ou partilhar dados.</p>
+            <p class="text-blue-800 text-sm">
+                <strong>ℹ️ Firebase:</strong> Dados sincronizados automaticamente entre todos os dispositivos em tempo real!
+            </p>
         </div>
 
         <!-- Tabs -->
@@ -136,7 +190,9 @@
     </div>
 
     <script>
-        // Dados globais
+        // Variáveis globais
+        let db = null;
+        let firebaseConfigured = false;
         let dados = {
             contadoresAgua: [{ id: 1, descricao: 'Contador Água 1' }],
             contadoresLuz: [{ id: 1, descricao: 'Contador Luz 1' }],
@@ -146,34 +202,153 @@
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
-            carregarDados();
+            tentarConectarFirebase();
             document.getElementById('data-leitura').valueAsDate = new Date();
             const hoje = new Date();
             document.getElementById('mes-fatura').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
         });
 
-        // Carregar dados do localStorage
-        function carregarDados() {
-            try {
-                const dadosGuardados = localStorage.getItem('calculadora-agua-luz');
-                if (dadosGuardados) {
-                    dados = JSON.parse(dadosGuardados);
+        // Tentar conectar ao Firebase
+        function tentarConectarFirebase() {
+            const config = localStorage.getItem('firebase-config');
+            if (config) {
+                try {
+                    const firebaseConfig = JSON.parse(config);
+                    inicializarFirebase(firebaseConfig);
+                } catch (e) {
+                    console.error('Erro ao carregar config:', e);
+                    atualizarStatus('🔴 Erro na configuração');
                 }
-            } catch (e) {
-                console.log('Erro ao carregar dados');
+            } else {
+                atualizarStatus('🔴 Não configurado');
+                renderizar();
             }
-            renderizar();
         }
 
-        // Guardar dados no localStorage
-        function guardarDados() {
+        // Inicializar Firebase
+        function inicializarFirebase(config) {
             try {
-                localStorage.setItem('calculadora-agua-luz', JSON.stringify(dados));
-                return true;
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.firestore();
+                firebaseConfigured = true;
+                atualizarStatus('🟢 Conectado');
+                carregarDadosFirebase();
             } catch (e) {
-                alert('Erro ao guardar dados. Verifique o espaço disponível no navegador.');
+                console.error('Erro Firebase:', e);
+                atualizarStatus('🔴 Erro de conexão');
+                firebaseConfigured = false;
+            }
+        }
+
+        // Atualizar status
+        function atualizarStatus(texto) {
+            document.getElementById('status-conexao').textContent = texto;
+        }
+
+        // Mostrar modal de configuração
+        function mostrarConfig() {
+            const config = localStorage.getItem('firebase-config');
+            if (config) {
+                const parsed = JSON.parse(config);
+                document.getElementById('config-apiKey').value = parsed.apiKey || '';
+                document.getElementById('config-authDomain').value = parsed.authDomain || '';
+                document.getElementById('config-projectId').value = parsed.projectId || '';
+                document.getElementById('config-storageBucket').value = parsed.storageBucket || '';
+                document.getElementById('config-messagingSenderId').value = parsed.messagingSenderId || '';
+                document.getElementById('config-appId').value = parsed.appId || '';
+            }
+            document.getElementById('modal-config').classList.remove('hidden');
+        }
+
+        // Fechar modal
+        function fecharConfig() {
+            document.getElementById('modal-config').classList.add('hidden');
+        }
+
+        // Salvar configuração
+        function salvarConfig() {
+            const config = {
+                apiKey: document.getElementById('config-apiKey').value.trim(),
+                authDomain: document.getElementById('config-authDomain').value.trim(),
+                projectId: document.getElementById('config-projectId').value.trim(),
+                storageBucket: document.getElementById('config-storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('config-messagingSenderId').value.trim(),
+                appId: document.getElementById('config-appId').value.trim()
+            };
+
+            if (!config.apiKey || !config.projectId) {
+                return alert('Preencha pelo menos apiKey e projectId');
+            }
+
+            localStorage.setItem('firebase-config', JSON.stringify(config));
+            fecharConfig();
+            alert('Configuração guardada! A página será recarregada.');
+            location.reload();
+        }
+
+        // Carregar dados do Firebase
+        async function carregarDadosFirebase() {
+            if (!firebaseConfigured) return;
+            
+            try {
+                // Carregar contadores água
+                const aguaDoc = await db.collection('dados').doc('contadoresAgua').get();
+                if (aguaDoc.exists) {
+                    dados.contadoresAgua = aguaDoc.data().lista || dados.contadoresAgua;
+                }
+
+                // Carregar contadores luz
+                const luzDoc = await db.collection('dados').doc('contadoresLuz').get();
+                if (luzDoc.exists) {
+                    dados.contadoresLuz = luzDoc.data().lista || dados.contadoresLuz;
+                }
+
+                // Carregar leituras
+                const leiturasDoc = await db.collection('dados').doc('leituras').get();
+                if (leiturasDoc.exists) {
+                    dados.leituras = leiturasDoc.data().lista || dados.leituras;
+                }
+
+                // Carregar faturas
+                const faturasDoc = await db.collection('dados').doc('faturas').get();
+                if (faturasDoc.exists) {
+                    dados.faturas = faturasDoc.data().lista || dados.faturas;
+                }
+
+                renderizar();
+            } catch (e) {
+                console.error('Erro ao carregar:', e);
+                alert('Erro ao carregar dados do Firebase');
+            }
+        }
+
+        // Guardar no Firebase
+        async function guardarFirebase(tipo, valor) {
+            if (!firebaseConfigured) {
+                alert('Firebase não configurado. Clique em "Configurar Firebase"');
                 return false;
             }
+
+            try {
+                await db.collection('dados').doc(tipo).set({ lista: valor });
+                return true;
+            } catch (e) {
+                console.error('Erro ao guardar:', e);
+                alert('Erro ao guardar no Firebase: ' + e.message);
+                return false;
+            }
+        }
+
+        // Sincronizar
+        async function sincronizar() {
+            if (!firebaseConfigured) {
+                return alert('Configure o Firebase primeiro!');
+            }
+            atualizarStatus('🔄 Sincronizando...');
+            await carregarDadosFirebase();
+            atualizarStatus('🟢 Conectado');
         }
 
         // Mudar tab
@@ -190,12 +365,12 @@
         }
 
         // Adicionar contador água
-        function adicionarContadorAgua() {
+        async function adicionarContadorAgua() {
             const input = document.getElementById('nova-agua');
             if (!input.value.trim()) return alert('Insira uma descrição');
             const novoId = Math.max(0, ...dados.contadoresAgua.map(c => c.id)) + 1;
             dados.contadoresAgua.push({ id: novoId, descricao: input.value.trim() });
-            if (guardarDados()) {
+            if (await guardarFirebase('contadoresAgua', dados.contadoresAgua)) {
                 input.value = '';
                 renderizar();
                 alert('Contador adicionado!');
@@ -203,12 +378,12 @@
         }
 
         // Adicionar contador luz
-        function adicionarContadorLuz() {
+        async function adicionarContadorLuz() {
             const input = document.getElementById('nova-luz');
             if (!input.value.trim()) return alert('Insira uma descrição');
             const novoId = Math.max(0, ...dados.contadoresLuz.map(c => c.id)) + 1;
             dados.contadoresLuz.push({ id: novoId, descricao: input.value.trim() });
-            if (guardarDados()) {
+            if (await guardarFirebase('contadoresLuz', dados.contadoresLuz)) {
                 input.value = '';
                 renderizar();
                 alert('Contador adicionado!');
@@ -216,28 +391,28 @@
         }
 
         // Remover contadores
-        function removerContadorAgua(id) {
+        async function removerContadorAgua(id) {
             if (dados.contadoresAgua.length <= 1) return alert('Deve existir pelo menos um contador');
             if (!confirm('Remover este contador?')) return;
             dados.contadoresAgua = dados.contadoresAgua.filter(c => c.id !== id);
-            if (guardarDados()) {
+            if (await guardarFirebase('contadoresAgua', dados.contadoresAgua)) {
                 renderizar();
                 alert('Contador removido!');
             }
         }
 
-        function removerContadorLuz(id) {
+        async function removerContadorLuz(id) {
             if (dados.contadoresLuz.length <= 1) return alert('Deve existir pelo menos um contador');
             if (!confirm('Remover este contador?')) return;
             dados.contadoresLuz = dados.contadoresLuz.filter(c => c.id !== id);
-            if (guardarDados()) {
+            if (await guardarFirebase('contadoresLuz', dados.contadoresLuz)) {
                 renderizar();
                 alert('Contador removido!');
             }
         }
 
         // Registar leitura
-        function registarLeitura() {
+        async function registarLeitura() {
             const dataLeitura = document.getElementById('data-leitura').value;
             const leituraAgua = dados.contadoresAgua.map(c => ({
                 contadorId: c.id,
@@ -254,24 +429,22 @@
                 return alert('Preencha todas as leituras');
             }
 
-            const novaLeitura = {
+            dados.leituras.push({
                 id: Date.now(),
                 data: dataLeitura,
                 agua: leituraAgua,
                 luz: leituraLuz
-            };
-
-            dados.leituras.push(novaLeitura);
+            });
             dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
             
-            if (guardarDados()) {
+            if (await guardarFirebase('leituras', dados.leituras)) {
                 alert('Leitura registada!');
                 renderizar();
             }
         }
 
         // Registar fatura
-        function registarFatura() {
+        async function registarFatura() {
             const mes = document.getElementById('mes-fatura').value;
             const agua = parseFloat(document.getElementById('valor-agua').value);
             const luz = parseFloat(document.getElementById('valor-luz').value);
@@ -281,7 +454,7 @@
             dados.faturas.push({ id: Date.now(), mes, agua, luz });
             dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
             
-            if (guardarDados()) {
+            if (await guardarFirebase('faturas', dados.faturas)) {
                 document.getElementById('valor-agua').value = '';
                 document.getElementById('valor-luz').value = '';
                 alert('Fatura registada!');
@@ -299,44 +472,6 @@
             a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(url);
-        }
-
-        // Importar
-        function importarDados(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const importado = JSON.parse(ev.target.result);
-                    if (!confirm('Substituir dados atuais?')) return;
-                    dados = importado;
-                    if (guardarDados()) {
-                        alert('Dados importados!');
-                        renderizar();
-                    }
-                } catch (err) {
-                    alert('Ficheiro inválido');
-                }
-            };
-            reader.readAsText(file);
-            e.target.value = '';
-        }
-
-        // Limpar tudo
-        function limparTudo() {
-            if (!confirm('ATENÇÃO: Isto irá apagar TODOS os dados permanentemente. Tem certeza?')) return;
-            if (!confirm('Última confirmação: Apagar tudo mesmo?')) return;
-            localStorage.removeItem('calculadora-agua-luz');
-            dados = {
-                contadoresAgua: [{ id: 1, descricao: 'Contador Água 1' }],
-                contadoresLuz: [{ id: 1, descricao: 'Contador Luz 1' }],
-                leituras: [],
-                faturas: []
-            };
-            guardarDados();
-            renderizar();
-            alert('Todos os dados foram apagados!');
         }
 
         // Renderizar inputs de leituras
@@ -374,7 +509,7 @@
             const fatura = dados.faturas.find(f => f.mes === mes);
 
             if (!fatura) {
-                div.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Fatura não encontrada para este período</p></div>';
+                div.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Fatura não encontrada</p></div>';
                 return;
             }
 
