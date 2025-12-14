@@ -1,4 +1,44 @@
-<!DOCTYPE html>
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO FIREBASE
+        // ============================================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAzHEpMGVT3HtsSSgdHVcNANMdjiQMeO-g",
+            authDomain: "calculadora-agua-luz.firebaseapp.com",
+            projectId: "calculadora-agua-luz",
+            storageBucket: "calculadora-agua-luz.firebasestorage.app",
+            messagingSenderId: "931167809034",
+            appId: "1:931167809034:web:d3ace9cbe99b209fc7b9f3"
+        };
+        // ============================================
+
+        // Variáveis globais
+        let db = null;
+        let firebaseConfigured = false;
+        let editandoContadorAgua = null;
+        let editandoContadorLuz = null;
+        let editandoLeitura = null;
+        let editandoFatura = null;
+        let dados = {
+            contadoresAgua: [{ id: 1, descricao: 'Contador Água 1' }],
+            contadoresLuz: [{ id: 1, descricao: 'Contador Luz 1' }],
+            leituras: [],
+            faturas: []
+        };
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            inicializarFirebase();
+            document.getElementById('data-leitura').valueAsDate = new Date();
+            const hoje = new Date();
+            document.getElementById('mes-fatura').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+        });
+
+        // Inicializar Firebase
+        function inicializarFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                <!DOCTYPE html>
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
@@ -112,9 +152,9 @@
                         <div>
                             <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💧 Contadores de Água</h2>
                             <div id="lista-agua" class="space-y-3 mb-4"></div>
-                            <div class="flex gap-2">
+                            <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="text" id="nova-agua" placeholder="Nome do contador" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                                <button onclick="adicionarContadorAgua()" class="bg-blue-600 text-white px-4 md:px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-blue-700 whitespace-nowrap">
+                                <button onclick="adicionarContadorAgua()" class="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-blue-700 whitespace-nowrap">
                                     ➕ Adicionar
                                 </button>
                             </div>
@@ -124,9 +164,9 @@
                         <div>
                             <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">⚡ Contadores de Luz</h2>
                             <div id="lista-luz" class="space-y-3 mb-4"></div>
-                            <div class="flex gap-2">
+                            <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="text" id="nova-luz" placeholder="Nome do contador" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                                <button onclick="adicionarContadorLuz()" class="bg-yellow-600 text-white px-4 md:px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-yellow-700 whitespace-nowrap">
+                                <button onclick="adicionarContadorLuz()" class="w-full sm:w-auto bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-yellow-700 whitespace-nowrap">
                                     ➕ Adicionar
                                 </button>
                             </div>
@@ -411,6 +451,57 @@
             }
         }
 
+        // Editar contadores
+        function editarContadorAgua(id) {
+            editandoContadorAgua = id;
+            renderizar();
+        }
+
+        function editarContadorLuz(id) {
+            editandoContadorLuz = id;
+            renderizar();
+        }
+
+        async function salvarEdicaoContadorAgua(id) {
+            const novaDescricao = document.getElementById(`edit-agua-${id}`).value.trim();
+            if (!novaDescricao) return alert('Insira uma descrição');
+            
+            dados.contadoresAgua = dados.contadoresAgua.map(c => 
+                c.id === id ? { ...c, descricao: novaDescricao } : c
+            );
+            
+            if (await guardarFirebase('contadoresAgua', dados.contadoresAgua)) {
+                editandoContadorAgua = null;
+                renderizar();
+                alert('Contador atualizado!');
+            }
+        }
+
+        async function salvarEdicaoContadorLuz(id) {
+            const novaDescricao = document.getElementById(`edit-luz-${id}`).value.trim();
+            if (!novaDescricao) return alert('Insira uma descrição');
+            
+            dados.contadoresLuz = dados.contadoresLuz.map(c => 
+                c.id === id ? { ...c, descricao: novaDescricao } : c
+            );
+            
+            if (await guardarFirebase('contadoresLuz', dados.contadoresLuz)) {
+                editandoContadorLuz = null;
+                renderizar();
+                alert('Contador atualizado!');
+            }
+        }
+
+        function cancelarEdicaoAgua() {
+            editandoContadorAgua = null;
+            renderizar();
+        }
+
+        function cancelarEdicaoLuz() {
+            editandoContadorLuz = null;
+            renderizar();
+        }
+
         // Registar leitura
         async function registarLeitura() {
             const dataLeitura = document.getElementById('data-leitura').value;
@@ -459,6 +550,86 @@
                 document.getElementById('valor-luz').value = '';
                 alert('Fatura registada!');
                 renderizar();
+            }
+        }
+
+        // Editar leitura
+        function editarLeitura(id) {
+            const leitura = dados.leituras.find(l => l.id === id);
+            if (!leitura) return;
+            editandoLeitura = JSON.parse(JSON.stringify(leitura)); // deep copy
+            renderizar();
+        }
+
+        async function salvarEdicaoLeitura() {
+            if (!editandoLeitura) return;
+
+            // Validar valores
+            const todosPreenchidos = editandoLeitura.agua.every(a => a.valor > 0) && 
+                                     editandoLeitura.luz.every(l => l.valor > 0);
+            if (!todosPreenchidos) return alert('Preencha todos os valores');
+
+            dados.leituras = dados.leituras.map(l => 
+                l.id === editandoLeitura.id ? editandoLeitura : l
+            );
+            dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            if (await guardarFirebase('leituras', dados.leituras)) {
+                editandoLeitura = null;
+                renderizar();
+                alert('Leitura atualizada!');
+            }
+        }
+
+        function cancelarEdicaoLeitura() {
+            editandoLeitura = null;
+            renderizar();
+        }
+
+        async function eliminarLeitura(id) {
+            if (!confirm('Tem certeza que deseja eliminar esta leitura?')) return;
+            dados.leituras = dados.leituras.filter(l => l.id !== id);
+            if (await guardarFirebase('leituras', dados.leituras)) {
+                renderizar();
+                alert('Leitura eliminada!');
+            }
+        }
+
+        // Editar fatura
+        function editarFatura(id) {
+            const fatura = dados.faturas.find(f => f.id === id);
+            if (!fatura) return;
+            editandoFatura = JSON.parse(JSON.stringify(fatura));
+            renderizar();
+        }
+
+        async function salvarEdicaoFatura() {
+            if (!editandoFatura) return;
+            if (!editandoFatura.agua || !editandoFatura.luz) return alert('Preencha os valores');
+
+            dados.faturas = dados.faturas.map(f => 
+                f.id === editandoFatura.id ? editandoFatura : f
+            );
+            dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
+
+            if (await guardarFirebase('faturas', dados.faturas)) {
+                editandoFatura = null;
+                renderizar();
+                alert('Fatura atualizada!');
+            }
+        }
+
+        function cancelarEdicaoFatura() {
+            editandoFatura = null;
+            renderizar();
+        }
+
+        async function eliminarFatura(id) {
+            if (!confirm('Tem certeza que deseja eliminar esta fatura?')) return;
+            dados.faturas = dados.faturas.filter(f => f.id !== id);
+            if (await guardarFirebase('faturas', dados.faturas)) {
+                renderizar();
+                alert('Fatura eliminada!');
             }
         }
 
@@ -597,41 +768,119 @@
         // Renderizar tudo
         function renderizar() {
             // Contadores Água
-            document.getElementById('lista-agua').innerHTML = dados.contadoresAgua.map(c => `
-                <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
-                    <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
-                    <button onclick="removerContadorAgua(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
-                </div>
-            `).join('');
+            document.getElementById('lista-agua').innerHTML = dados.contadoresAgua.map(c => {
+                if (editandoContadorAgua === c.id) {
+                    return `
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
+                            <input type="text" id="edit-agua-${c.id}" value="${c.descricao}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
+                            <div class="flex gap-2">
+                                <button onclick="salvarEdicaoContadorAgua(${c.id})" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">✓ Guardar</button>
+                                <button onclick="cancelarEdicaoAgua()" class="flex-1 sm:flex-none bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">✕ Cancelar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
+                        <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
+                        <div class="flex gap-2">
+                            <button onclick="editarContadorAgua(${c.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">✏️</button>
+                            <button onclick="removerContadorAgua(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
             // Contadores Luz
-            document.getElementById('lista-luz').innerHTML = dados.contadoresLuz.map(c => `
-                <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
-                    <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
-                    <button onclick="removerContadorLuz(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
-                </div>
-            `).join('');
+            document.getElementById('lista-luz').innerHTML = dados.contadoresLuz.map(c => {
+                if (editandoContadorLuz === c.id) {
+                    return `
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
+                            <input type="text" id="edit-luz-${c.id}" value="${c.descricao}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
+                            <div class="flex gap-2">
+                                <button onclick="salvarEdicaoContadorLuz(${c.id})" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">✓ Guardar</button>
+                                <button onclick="cancelarEdicaoLuz()" class="flex-1 sm:flex-none bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">✕ Cancelar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
+                        <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
+                        <div class="flex gap-2">
+                            <button onclick="editarContadorLuz(${c.id})" class="bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700">✏️</button>
+                            <button onclick="removerContadorLuz(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
             // Histórico Leituras
             if (dados.leituras.length > 0) {
                 document.getElementById('historico-leituras').innerHTML = `
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
                     <div class="space-y-3">
-                        ${dados.leituras.map(l => `
-                            <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
-                                <p class="font-bold text-gray-800 mb-3 text-sm md:text-base">${new Date(l.data).toLocaleDateString('pt-PT')}</p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs md:text-sm">
-                                    <div>
-                                        <p class="font-semibold text-blue-600 mb-2">Água:</p>
-                                        ${l.agua.map(a => `<p class="text-gray-600">${a.descricao}: ${a.valor.toFixed(3)} m³</p>`).join('')}
+                        ${dados.leituras.map(l => {
+                            if (editandoLeitura && editandoLeitura.id === l.id) {
+                                return `
+                                    <div class="bg-white border-2 border-indigo-500 rounded-lg p-3 md:p-4">
+                                        <div class="mb-4">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Data da Leitura</label>
+                                            <input type="date" value="${editandoLeitura.data}" onchange="editandoLeitura.data = this.value" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <p class="font-semibold text-blue-600 mb-3">Água (m³):</p>
+                                                ${editandoLeitura.agua.map((a, idx) => `
+                                                    <div class="mb-2">
+                                                        <label class="block text-xs text-gray-600 mb-1">${a.descricao}</label>
+                                                        <input type="number" step="0.001" value="${a.valor}" 
+                                                            onchange="editandoLeitura.agua[${idx}].valor = parseFloat(this.value)" 
+                                                            class="w-full px-3 py-1 text-sm border border-gray-300 rounded">
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-yellow-600 mb-3">Luz (kWh):</p>
+                                                ${editandoLeitura.luz.map((lz, idx) => `
+                                                    <div class="mb-2">
+                                                        <label class="block text-xs text-gray-600 mb-1">${lz.descricao}</label>
+                                                        <input type="number" step="0.001" value="${lz.valor}" 
+                                                            onchange="editandoLeitura.luz[${idx}].valor = parseFloat(this.value)" 
+                                                            class="w-full px-3 py-1 text-sm border border-gray-300 rounded">
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="salvarEdicaoLeitura()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 text-sm font-semibold">✓ Guardar</button>
+                                            <button onclick="cancelarEdicaoLeitura()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 text-sm font-semibold">✕ Cancelar</button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-yellow-600 mb-2">Luz:</p>
-                                        ${l.luz.map(lz => `<p class="text-gray-600">${lz.descricao}: ${lz.valor.toFixed(3)} kWh</p>`).join('')}
+                                `;
+                            }
+                            return `
+                                <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <p class="font-bold text-gray-800 text-sm md:text-base">${new Date(l.data).toLocaleDateString('pt-PT')}</p>
+                                        <div class="flex gap-2">
+                                            <button onclick="editarLeitura(${l.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 text-xs">✏️</button>
+                                            <button onclick="eliminarLeitura(${l.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-xs">🗑️</button>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs md:text-sm">
+                                        <div>
+                                            <p class="font-semibold text-blue-600 mb-2">Água:</p>
+                                            ${l.agua.map(a => `<p class="text-gray-600">${a.descricao}: ${a.valor.toFixed(3)} m³</p>`).join('')}
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-yellow-600 mb-2">Luz:</p>
+                                            ${l.luz.map(lz => `<p class="text-gray-600">${lz.descricao}: ${lz.valor.toFixed(3)} kWh</p>`).join('')}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 `;
             }
@@ -641,16 +890,54 @@
                 document.getElementById('historico-faturas').innerHTML = `
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
                     <div class="space-y-3 max-w-2xl mx-auto">
-                        ${dados.faturas.map(f => `
-                            <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
-                                <p class="font-bold text-gray-800 mb-2 text-sm md:text-base">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
-                                <div class="grid grid-cols-2 gap-4 text-xs md:text-sm">
-                                    <p class="text-gray-600">Água: ${f.agua.toFixed(2)} €</p>
-                                    <p class="text-gray-600">Luz: ${f.luz.toFixed(2)} €</p>
+                        ${dados.faturas.map(f => {
+                            if (editandoFatura && editandoFatura.id === f.id) {
+                                return `
+                                    <div class="bg-white border-2 border-indigo-500 rounded-lg p-3 md:p-4">
+                                        <div class="mb-4">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Mês de Referência</label>
+                                            <input type="month" value="${editandoFatura.mes}" 
+                                                onchange="editandoFatura.mes = this.value" 
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">💧 Água (€)</label>
+                                                <input type="number" step="0.01" value="${editandoFatura.agua}" 
+                                                    onchange="editandoFatura.agua = parseFloat(this.value)" 
+                                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">⚡ Luz (€)</label>
+                                                <input type="number" step="0.01" value="${editandoFatura.luz}" 
+                                                    onchange="editandoFatura.luz = parseFloat(this.value)" 
+                                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="salvarEdicaoFatura()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 text-sm font-semibold">✓ Guardar</button>
+                                            <button onclick="cancelarEdicaoFatura()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 text-sm font-semibold">✕ Cancelar</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            return `
+                                <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <p class="font-bold text-gray-800 text-sm md:text-base">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
+                                        <div class="flex gap-2">
+                                            <button onclick="editarFatura(${f.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 text-xs">✏️</button>
+                                            <button onclick="eliminarFatura(${f.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-xs">🗑️</button>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 text-xs md:text-sm">
+                                        <p class="text-gray-600">Água: ${f.agua.toFixed(2)} €</p>
+                                        <p class="text-gray-600">Luz: ${f.luz.toFixed(2)} €</p>
+                                    </div>
+                                    <p class="font-bold text-indigo-600 mt-2 text-sm md:text-base">Total: ${(f.agua + f.luz).toFixed(2)} €</p>
                                 </div>
-                                <p class="font-bold text-indigo-600 mt-2 text-sm md:text-base">Total: ${(f.agua + f.luz).toFixed(2)} €</p>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 `;
             }
