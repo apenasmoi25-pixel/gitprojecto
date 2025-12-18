@@ -534,70 +534,70 @@
                 return alert('Necessita de pelo menos 2 leituras para exportar cálculos');
             }
 
+            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
             let relatorio = '='.repeat(60) + '\n';
-            relatorio += '         RELATÓRIO DE CONSUMOS E CUSTOS\n';
+            relatorio += '         RELATORIO DE CONSUMOS E CUSTOS\n';
             relatorio += '='.repeat(60) + '\n\n';
 
-            // Para cada fatura, calcular e adicionar ao relatório
             dados.faturas.forEach(fatura => {
-                const leiturasDoMes = dados.leituras.filter(l => l.data.slice(0, 7) === fatura.mes);
-                if (leiturasDoMes.length < 2) return;
+                for (let i = 1; i < leiturasOrdenadas.length; i++) {
+                    const leituraAnterior = leiturasOrdenadas[i - 1];
+                    const leituraAtual = leiturasOrdenadas[i];
+                    
+                    const dataAnterior = new Date(leituraAnterior.data);
+                    const dataAtual = new Date(leituraAtual.data);
+                    const dataFatura = new Date(fatura.mes + '-01');
+                    
+                    if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
+                        const consumoPrincipalAgua = leituraAtual.principalAgua - leituraAnterior.principalAgua;
+                        const consumoPrincipalLuz = leituraAtual.principalLuz - leituraAnterior.principalLuz;
 
-                const leituraAtual = leiturasDoMes[0];
-                const leituraAnterior = leiturasDoMes[1];
+                        const consumosAgua = leituraAtual.agua.map(atual => {
+                            const anterior = leituraAnterior.agua.find(a => a.contadorId === atual.contadorId);
+                            return { descricao: atual.descricao, consumo: atual.valor - (anterior ? anterior.valor : 0) };
+                        });
 
-                const consumoPrincipalAgua = leituraAtual.principalAgua - leituraAnterior.principalAgua;
-                const consumoPrincipalLuz = leituraAtual.principalLuz - leituraAnterior.principalLuz;
+                        const consumosLuz = leituraAtual.luz.map(atual => {
+                            const anterior = leituraAnterior.luz.find(l => l.contadorId === atual.contadorId);
+                            return { descricao: atual.descricao, consumo: atual.valor - (anterior ? anterior.valor : 0) };
+                        });
 
-                const consumosAgua = leituraAtual.agua.map(atual => {
-                    const anterior = leituraAnterior.agua.find(a => a.contadorId === atual.contadorId);
-                    return {
-                        descricao: atual.descricao,
-                        consumo: atual.valor - (anterior ? anterior.valor : 0)
-                    };
-                });
+                        const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
+                        const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
+                        const consumoCasaAgua = consumoPrincipalAgua - somaAgua;
+                        const consumoCasaLuz = consumoPrincipalLuz - somaLuz;
 
-                const consumosLuz = leituraAtual.luz.map(atual => {
-                    const anterior = leituraAnterior.luz.find(l => l.contadorId === atual.contadorId);
-                    return {
-                        descricao: atual.descricao,
-                        consumo: atual.valor - (anterior ? anterior.valor : 0)
-                    };
-                });
+                        const custoCasaAgua = (consumoCasaAgua / consumoPrincipalAgua) * fatura.agua;
+                        const custoCasaLuz = (consumoCasaLuz / consumoPrincipalLuz) * fatura.luz;
 
-                const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
-                const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
-                const consumoCasaAgua = consumoPrincipalAgua - somaAgua;
-                const consumoCasaLuz = consumoPrincipalLuz - somaLuz;
+                        relatorio += `MES: ${new Date(fatura.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}\n`;
+                        relatorio += `Periodo: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}\n`;
+                        relatorio += '-'.repeat(60) + '\n\n';
 
-                const custoCasaAgua = (consumoCasaAgua / consumoPrincipalAgua) * fatura.agua;
-                const custoCasaLuz = (consumoCasaLuz / consumoPrincipalLuz) * fatura.luz;
+                        relatorio += 'CASA PRINCIPAL\n';
+                        relatorio += `   Agua: ${consumoCasaAgua} (${consumoPrincipalAgua} total - ${somaAgua} terrenos)\n`;
+                        relatorio += `   Custo Agua: €${custoCasaAgua.toFixed(2)}\n`;
+                        relatorio += `   Luz: ${consumoCasaLuz} (${consumoPrincipalLuz} total - ${somaLuz} terrenos)\n`;
+                        relatorio += `   Custo Luz: €${custoCasaLuz.toFixed(2)}\n`;
+                        relatorio += `   TOTAL A PAGAR: €${(custoCasaAgua + custoCasaLuz).toFixed(2)}\n\n`;
 
-                relatorio += `MÊS: ${new Date(fatura.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}\n`;
-                relatorio += `Período: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}\n`;
-                relatorio += '-'.repeat(60) + '\n\n';
+                        relatorio += 'TERRENOS\n';
+                        consumosAgua.forEach((itemAgua, idx) => {
+                            const itemLuz = consumosLuz[idx];
+                            const custoAgua = (itemAgua.consumo / consumoPrincipalAgua) * fatura.agua;
+                            const custoLuz = (itemLuz.consumo / consumoPrincipalLuz) * fatura.luz;
+                            relatorio += `   ${itemAgua.descricao}:\n`;
+                            relatorio += `      Agua: ${itemAgua.consumo} -> €${custoAgua.toFixed(2)}\n`;
+                            relatorio += `      Luz: ${itemLuz.consumo} -> €${custoLuz.toFixed(2)}\n`;
+                            relatorio += `      TOTAL: €${(custoAgua + custoLuz).toFixed(2)}\n\n`;
+                        });
 
-                relatorio += '🏠 CASA PRINCIPAL\n';
-                relatorio += `   Água: ${consumoCasaAgua} (${consumoPrincipalAgua} total - ${somaAgua} terrenos)\n`;
-                relatorio += `   Custo Água: €${custoCasaAgua.toFixed(2)}\n`;
-                relatorio += `   Luz: ${consumoCasaLuz} (${consumoPrincipalLuz} total - ${somaLuz} terrenos)\n`;
-                relatorio += `   Custo Luz: €${custoCasaLuz.toFixed(2)}\n`;
-                relatorio += `   TOTAL A PAGAR: €${(custoCasaAgua + custoCasaLuz).toFixed(2)}\n\n`;
-
-                relatorio += '🏘️ TERRENOS\n';
-                consumosAgua.forEach((itemAgua, idx) => {
-                    const itemLuz = consumosLuz[idx];
-                    const custoAgua = (itemAgua.consumo / consumoPrincipalAgua) * fatura.agua;
-                    const custoLuz = (itemLuz.consumo / consumoPrincipalLuz) * fatura.luz;
-                    relatorio += `   ${itemAgua.descricao}:\n`;
-                    relatorio += `      Água: ${itemAgua.consumo} → €${custoAgua.toFixed(2)}\n`;
-                    relatorio += `      Luz: ${itemLuz.consumo} → €${custoLuz.toFixed(2)}\n`;
-                    relatorio += `      TOTAL: €${(custoAgua + custoLuz).toFixed(2)}\n\n`;
-                });
-
-                relatorio += '📊 VERIFICAÇÃO\n';
-                relatorio += `   Fatura Total: €${(fatura.agua + fatura.luz).toFixed(2)}\n\n`;
-                relatorio += '='.repeat(60) + '\n\n';
+                        relatorio += 'VERIFICACAO\n';
+                        relatorio += `   Fatura Total: €${(fatura.agua + fatura.luz).toFixed(2)}\n\n`;
+                        relatorio += '='.repeat(60) + '\n\n';
+                        break;
+                    }
+                }
             });
 
             const blob = new Blob([relatorio], { type: 'text/plain;charset=utf-8' });
@@ -641,17 +641,42 @@
                 return;
             }
 
-            // Listar faturas com leituras suficientes
+            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
             const faturasDisponiveis = [];
+            
             dados.faturas.forEach(fatura => {
-                const leiturasDoMes = dados.leituras.filter(l => l.data.slice(0, 7) === fatura.mes).sort((a, b) => new Date(b.data) - new Date(a.data));
-                if (leiturasDoMes.length >= 2) {
-                    faturasDisponiveis.push(fatura);
+                for (let i = 1; i < leiturasOrdenadas.length; i++) {
+                    const leituraAnterior = leiturasOrdenadas[i - 1];
+                    const leituraAtual = leiturasOrdenadas[i];
+                    
+                    const dataAnterior = new Date(leituraAnterior.data);
+                    const dataAtual = new Date(leituraAtual.data);
+                    const dataFatura = new Date(fatura.mes + '-01');
+                    
+                    if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
+                        faturasDisponiveis.push({
+                            ...fatura,
+                            leituraAtualIdx: i,
+                            leituraAnteriorIdx: i - 1
+                        });
+                        break;
+                    }
                 }
             });
 
             if (faturasDisponiveis.length === 0) {
-                div.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Sem faturas com leituras suficientes para cálculo</p></div>';
+                div.innerHTML = `
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                        <p class="text-yellow-800 font-semibold mb-4">⚠️ Não foi possível associar faturas às leituras</p>
+                        <div class="text-sm space-y-2 text-gray-700">
+                            <p><strong>Faturas registadas:</strong></p>
+                            ${dados.faturas.map(f => `<p>• ${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>`).join('')}
+                            <p class="mt-4"><strong>Leituras registadas:</strong></p>
+                            ${leiturasOrdenadas.map(l => `<p>• ${new Date(l.data).toLocaleDateString('pt-PT')}</p>`).join('')}
+                            <p class="mt-4 text-xs text-gray-600">💡 Dica: Certifique-se que tem leituras antes e durante o mês da fatura.</p>
+                        </div>
+                    </div>
+                `;
                 return;
             }
 
@@ -679,19 +704,33 @@
             const fatura = dados.faturas.find(f => f.mes === mesSelecionado);
             if (!fatura) return;
 
-            const leiturasDoMes = dados.leituras.filter(l => l.data.slice(0, 7) === mesSelecionado).sort((a, b) => new Date(b.data) - new Date(a.data));
-            if (leiturasDoMes.length < 2) {
-                document.getElementById('calculo-detalhado').innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Necessita de 2 leituras para este mês</p></div>';
-                return;
+            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
+            let leituraAtual = null;
+            let leituraAnterior = null;
+
+            for (let i = 1; i < leiturasOrdenadas.length; i++) {
+                const anterior = leiturasOrdenadas[i - 1];
+                const atual = leiturasOrdenadas[i];
+                
+                const dataAnterior = new Date(anterior.data);
+                const dataAtual = new Date(atual.data);
+                const dataFatura = new Date(mesSelecionado + '-01');
+                
+                if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
+                    leituraAnterior = anterior;
+                    leituraAtual = atual;
+                    break;
+                }
             }
 
-            const leituraAtual = leiturasDoMes[0];
-            const leituraAnterior = leiturasDoMes[1];
+            if (!leituraAtual || !leituraAnterior) {
+                document.getElementById('calculo-detalhado').innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Sem leituras correspondentes para este mês</p></div>';
+                return;
+            }
 
             const consumoPrincipalAgua = leituraAtual.principalAgua - leituraAnterior.principalAgua;
             const consumoPrincipalLuz = leituraAtual.principalLuz - leituraAnterior.principalLuz;
 
-            // Consumos dos terrenos
             const consumosAgua = leituraAtual.agua.map(atual => {
                 const anterior = leituraAnterior.agua.find(a => a.contadorId === atual.contadorId);
                 return {
@@ -828,7 +867,7 @@
                         </div>
                     </div>
                     ${Math.abs(totalGeral - (fatura.agua + fatura.luz)) < 0.01 ? 
-                        '<p class="text-green-700 font-semibold mt-4 text-center">✓ Valores conferem!</p>' : 
+                        '<p class="text-green-700 font-semibold mt-4 text-center">✔ Valores conferem!</p>' : 
                         '<p class="text-red-700 font-semibold mt-4 text-center">⚠️ Diferença detectada!</p>'
                     }
                 </div>
@@ -836,7 +875,6 @@
         }
 
         function renderizar() {
-            // Contador Principal
             document.getElementById('contador-principal-agua').innerHTML = `
                 <div class="flex items-center justify-between">
                     <div>
@@ -861,7 +899,6 @@
                 </div>
             `;
 
-            // Contadores Água Terrenos
             document.getElementById('lista-agua').innerHTML = dados.contadoresAgua.map(c => {
                 if (editandoContadorAgua === c.id) {
                     return `
@@ -885,7 +922,6 @@
                 `;
             }).join('');
 
-            // Contadores Luz Terrenos
             document.getElementById('lista-luz').innerHTML = dados.contadoresLuz.map(c => {
                 if (editandoContadorLuz === c.id) {
                     return `
@@ -909,7 +945,6 @@
                 `;
             }).join('');
 
-            // Histórico Leituras
             if (dados.leituras.length > 0) {
                 document.getElementById('historico-leituras').innerHTML = `
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
@@ -985,7 +1020,6 @@
                 `;
             }
 
-            // Histórico Faturas
             if (dados.faturas.length > 0) {
                 document.getElementById('historico-faturas').innerHTML = `
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
