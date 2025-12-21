@@ -5,179 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Água e Luz</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
     <div class="max-w-6xl mx-auto">
-        <!-- Header -->
         <div class="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Calculadora de Água e Luz</h1>
-                <p class="text-sm md:text-base text-gray-600 mb-4">
-                    <span id="status-conexao" class="font-semibold">🔄 A conectar...</span>
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="sincronizar()" class="flex-1 md:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">
-                        🔄 Sincronizar
-                    </button>
-                    <button onclick="exportarDados()" class="flex-1 md:flex-none bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
-                        ⬇️ Exportar
-                    </button>
-                </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Calculadora de Água e Luz</h1>
+            <p class="text-sm md:text-base text-gray-600 mb-4">
+                <span id="status-conexao" class="font-semibold">🔄 A conectar...</span>
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="app.sincronizar()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">🔄 Sincronizar</button>
+                <button onclick="app.exportarDados()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">⬇️ Exportar</button>
             </div>
         </div>
 
-        <!-- Aviso -->
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-            <p class="text-blue-800 text-sm">
-                <strong>ℹ️ Sistema:</strong> A Casa Principal consome a diferença entre o contador geral e a soma dos terrenos. Todos pagam proporcionalmente.
-            </p>
+            <p class="text-blue-800 text-sm"><strong>ℹ️ Sistema:</strong> A Casa Principal consome a diferença entre o contador geral e a soma dos terrenos.</p>
         </div>
 
-        <!-- Tabs -->
         <div class="bg-white rounded-lg shadow-lg mb-6">
             <div class="grid grid-cols-2 md:flex border-b overflow-x-auto">
-                <button onclick="mudarTab('principal')" id="tab-principal" class="py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold bg-indigo-600 text-white whitespace-nowrap">
-                    🏠 Casa Principal
-                </button>
-                <button onclick="mudarTab('terrenos')" id="tab-terrenos" class="py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50 whitespace-nowrap">
-                    🏘️ Terrenos
-                </button>
-                <button onclick="mudarTab('leituras')" id="tab-leituras" class="py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50 whitespace-nowrap">
-                    📅 Leituras
-                </button>
-                <button onclick="mudarTab('faturas')" id="tab-faturas" class="py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50 whitespace-nowrap">
-                    💶 Faturas
-                </button>
-                <button onclick="mudarTab('calculos')" id="tab-calculos" class="py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50 whitespace-nowrap">
-                    🧮 Calcular
-                </button>
+                <button onclick="app.mudarTab('contadores')" id="tab-contadores" class="py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold bg-indigo-600 text-white">🏠 Contadores</button>
+                <button onclick="app.mudarTab('leituras')" id="tab-leituras" class="py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50">📅 Leituras</button>
+                <button onclick="app.mudarTab('faturas')" id="tab-faturas" class="py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50">💶 Faturas</button>
+                <button onclick="app.mudarTab('calculos')" id="tab-calculos" class="py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50">🧮 Calcular</button>
             </div>
 
             <div class="p-4 md:p-6">
-                <!-- Tab Casa Principal -->
-                <div id="content-principal">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🏠 Contador Principal da Casa</h2>
-                    <p class="text-sm text-gray-600 mb-6">Este é o contador geral que recebe a fatura da companhia. O consumo da casa será calculado automaticamente.</p>
+                <!-- TAB CONTADORES -->
+                <div id="content-contadores">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">🏠 Gestão de Contadores</h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-300">
-                            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                💧 Contador Água Principal
-                            </h3>
-                            <div id="contador-principal-agua"></div>
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Contadores Principais da Casa</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-300">
+                                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                                    <span class="text-2xl">💧</span>
+                                    <span>Água</span>
+                                </h4>
+                                <div id="contador-principal-agua"></div>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
+                                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                                    <span class="text-2xl">⚡</span>
+                                    <span>Luz</span>
+                                </h4>
+                                <div id="contador-principal-luz"></div>
+                            </div>
                         </div>
-                        
-                        <div class="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
-                            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                ⚡ Contador Luz Principal
-                            </h3>
-                            <div id="contador-principal-luz"></div>
+                    </div>
+
+                    <hr class="my-8 border-gray-300">
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Contadores dos Terrenos</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="text-2xl">💧</span>
+                                    <h4 class="text-lg font-bold text-blue-800">Água</h4>
+                                </div>
+                                <div id="lista-agua" class="space-y-3 mb-4"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="nova-agua" placeholder="Nome do terreno" maxlength="50" class="flex-1 px-4 py-2 border rounded-lg">
+                                    <button onclick="app.adicionarContadorAgua()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700">➕</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="text-2xl">⚡</span>
+                                    <h4 class="text-lg font-bold text-yellow-800">Luz</h4>
+                                </div>
+                                <div id="lista-luz" class="space-y-3 mb-4"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="nova-luz" placeholder="Nome do terreno" maxlength="50" class="flex-1 px-4 py-2 border rounded-lg">
+                                    <button onclick="app.adicionarContadorLuz()" class="bg-yellow-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-700">➕</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab Terrenos -->
-                <div id="content-terrenos" class="hidden">
-                    <div class="space-y-8">
-                        <div>
-                            <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💧 Contadores de Água dos Terrenos</h2>
-                            <div id="lista-agua" class="space-y-3 mb-4"></div>
-                            <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="nova-agua" placeholder="Nome do terreno" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                                <button onclick="adicionarContadorAgua()" class="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-blue-700">
-                                    ➕ Adicionar
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">⚡ Contadores de Luz dos Terrenos</h2>
-                            <div id="lista-luz" class="space-y-3 mb-4"></div>
-                            <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="nova-luz" placeholder="Nome do terreno" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                                <button onclick="adicionarContadorLuz()" class="w-full sm:w-auto bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm md:text-base font-semibold hover:bg-yellow-700">
-                                    ➕ Adicionar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab Leituras -->
+                <!-- TAB LEITURAS -->
                 <div id="content-leituras" class="hidden">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">Registar Leitura Mensal</h2>
+                    <h2 class="text-xl font-bold mb-6">Registar Leitura</h2>
                     <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Data da Leitura</label>
-                        <input type="date" id="data-leitura" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-semibold mb-2">Data</label>
+                        <input type="date" id="data-leitura" class="w-full px-4 py-2 border rounded-lg">
                     </div>
-
-                    <!-- Contador Principal -->
-                    <div class="bg-gray-50 rounded-lg p-4 mb-6 border-2 border-gray-300">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">🏠 Casa Principal (Contador Geral)</h3>
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 border-2">
+                        <h3 class="text-lg font-bold mb-4">🏠 Casa Principal</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" id="label-principal-agua">Água (m³)</label>
-                                <input type="number" step="0.001" id="leitura-principal-agua" placeholder="0.000" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <label class="block text-sm font-semibold mb-2">Água (m³)</label>
+                                <input type="number" step="1" min="0" id="leitura-principal-agua" placeholder="0" class="w-full px-4 py-2 border rounded-lg">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" id="label-principal-luz">Luz (kWh)</label>
-                                <input type="number" step="0.001" id="leitura-principal-luz" placeholder="0.000" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <label class="block text-sm font-semibold mb-2">Luz (kWh)</label>
+                                <input type="number" step="1" min="0" id="leitura-principal-luz" placeholder="0" class="w-full px-4 py-2 border rounded-lg">
                             </div>
                         </div>
                     </div>
-
-                    <!-- Terrenos -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-blue-50 rounded-lg p-4">
-                            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">💧 Água Terrenos (m³)</h3>
+                            <h3 class="text-lg font-bold mb-4">💧 Terrenos - Água</h3>
                             <div id="inputs-agua" class="space-y-3"></div>
                         </div>
                         <div class="bg-yellow-50 rounded-lg p-4">
-                            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">⚡ Luz Terrenos (kWh)</h3>
+                            <h3 class="text-lg font-bold mb-4">⚡ Terrenos - Luz</h3>
                             <div id="inputs-luz" class="space-y-3"></div>
                         </div>
                     </div>
-                    <button onclick="registarLeitura()" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700">
-                        ➕ Registar Leitura
-                    </button>
+                    <button onclick="app.registarLeitura()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700">➕ Registar</button>
                     <div id="historico-leituras" class="mt-8"></div>
                 </div>
 
-                <!-- Tab Faturas -->
+                <!-- TAB FATURAS -->
                 <div id="content-faturas" class="hidden">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">Registar Fatura Mensal</h2>
-                    <div class="max-w-2xl mx-auto">
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Mês de Referência</label>
-                            <input type="month" id="mes-fatura" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <h2 class="text-xl font-bold mb-6">Registar Faturas</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-300">
+                            <h3 class="text-xl font-bold text-blue-800 mb-4">💧 Água</h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold mb-2">Mês</label>
+                                <input type="month" id="mes-fatura-agua" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold mb-2">Valor (€)</label>
+                                <input type="number" step="0.01" min="0" id="valor-agua" placeholder="0.00" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <button onclick="app.registarFaturaAgua()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">➕ Registar</button>
                         </div>
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">💧 Valor Total Água (€)</label>
-                            <input type="number" step="0.01" id="valor-agua" placeholder="0.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <div class="bg-yellow-50 rounded-lg p-6 border-2 border-yellow-300">
+                            <h3 class="text-xl font-bold text-yellow-800 mb-4">⚡ Luz</h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold mb-2">Mês</label>
+                                <input type="month" id="mes-fatura-luz" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold mb-2">Valor (€)</label>
+                                <input type="number" step="0.01" min="0" id="valor-luz" placeholder="0.00" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <button onclick="app.registarFaturaLuz()" class="w-full bg-yellow-600 text-white py-3 rounded-lg font-semibold hover:bg-yellow-700">➕ Registar</button>
                         </div>
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">⚡ Valor Total Luz (€)</label>
-                            <input type="number" step="0.01" id="valor-luz" placeholder="0.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                        </div>
-                        <button onclick="registarFatura()" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700">
-                            ➕ Registar Fatura
-                        </button>
                     </div>
-                    <div id="historico-faturas" class="mt-8"></div>
+                    <div id="historico-faturas"></div>
                 </div>
 
-                <!-- Tab Cálculos -->
+                <!-- TAB CALCULOS -->
                 <div id="content-calculos" class="hidden">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Cálculo de Consumos e Custos</h2>
-                        <button onclick="exportarCalculos()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 flex items-center gap-2">
-                            📄 Exportar Cálculos
-                        </button>
-                    </div>
+                    <h2 class="text-xl font-bold mb-6">Cálculos</h2>
                     <div id="resultados-calculos"></div>
                 </div>
             </div>
@@ -185,891 +171,939 @@
     </div>
 
     <script>
-        // CONFIGURAÇÃO FIREBASE
-        const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyAzHEpMGVT3HtsSSgdHVcNANMdjiQMeO-g",
-            authDomain: "calculadora-agua-luz.firebaseapp.com",
-            projectId: "calculadora-agua-luz",
-            storageBucket: "calculadora-agua-luz.firebasestorage.app",
-            messagingSenderId: "931167809034",
-            appId: "1:931167809034:web:d3ace9cbe99b209fc7b9f3"
-        };
+        const app = {
+            db: null,
+            fbOk: false,
+            editandoLeitura: null,
+            editandoFaturaAgua: null,
+            editandoFaturaLuz: null,
+            editandoContadorAgua: null,
+            editandoContadorLuz: null,
+            editandoContadorPrincipalAgua: false,
+            editandoContadorPrincipalLuz: false,
+            dados: {
+                contadorPrincipalAgua: {id: 'p-agua', descricao: 'Contador Principal Água'},
+                contadorPrincipalLuz: {id: 'p-luz', descricao: 'Contador Principal Luz'},
+                contadoresAgua: [],
+                contadoresLuz: [],
+                leituras: [],
+                faturasAgua: [],
+                faturasLuz: []
+            },
 
-        let db = null;
-        let firebaseConfigured = false;
-        let editandoContadorAgua = null;
-        let editandoContadorLuz = null;
-        let editandoLeitura = null;
-        let editandoFatura = null;
-        let dados = {
-            contadorPrincipalAgua: { id: 'principal-agua', descricao: 'Contador Principal Água' },
-            contadorPrincipalLuz: { id: 'principal-luz', descricao: 'Contador Principal Luz' },
-            contadoresAgua: [],
-            contadoresLuz: [],
-            leituras: [],
-            faturas: []
+            toast(msg, tipo = 'info') {
+                const c = document.getElementById('toast-container');
+                const t = document.createElement('div');
+                const cores = {sucesso: 'bg-green-500', erro: 'bg-red-500', aviso: 'bg-yellow-500', info: 'bg-blue-500'};
+                const icons = {sucesso: '✓', erro: '✕', aviso: '⚠', info: 'ℹ'};
+                t.className = `${cores[tipo]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3`;
+                t.style.animation = 'slideIn 0.3s ease-out';
+                t.innerHTML = `<span class="text-2xl">${icons[tipo]}</span><span>${msg}</span><button onclick="this.parentElement.remove()" class="ml-2 font-bold">×</button>`;
+                c.appendChild(t);
+                setTimeout(() => { t.style.animation = 'slideOut 0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
+            },
+
+            validarTexto(v, n) {
+                const t = v.trim();
+                if (!t) { this.toast(`${n} obrigatório`, 'erro'); return null; }
+                if (t.length < 3) { this.toast(`${n} muito curto`, 'aviso'); return null; }
+                return t;
+            },
+
+            validarNum(v, n) {
+                const num = parseFloat(v);
+                if (isNaN(num) || num <= 0) { this.toast(`${n} inválido`, 'erro'); return null; }
+                return num;
+            },
+
+            validarInt(v, n) {
+                const num = parseInt(v);
+                if (isNaN(num) || num <= 0) { this.toast(`${n} inválido`, 'erro'); return null; }
+                return num;
+            },
+
+            async init() {
+                try {
+                    if (!firebase.apps.length) firebase.initializeApp({
+                        apiKey: "AIzaSyAzHEpMGVT3HtsSSgdHVcNANMdjiQMeO-g",
+                        authDomain: "calculadora-agua-luz.firebaseapp.com",
+                        projectId: "calculadora-agua-luz",
+                        storageBucket: "calculadora-agua-luz.firebasestorage.app",
+                        messagingSenderId: "931167809034",
+                        appId: "1:931167809034:web:d3ace9cbe99b209fc7b9f3"
+                    });
+                    this.db = firebase.firestore();
+                    this.fbOk = true;
+                    document.getElementById('status-conexao').textContent = '🟢 Conectado';
+                    await this.carregar();
+                } catch (e) {
+                    document.getElementById('status-conexao').textContent = '🔴 Erro';
+                    this.toast('Erro Firebase: ' + e.message, 'erro');
+                    this.atualizar();
+                }
+            },
+
+            async carregar() {
+                if (!this.fbOk) return;
+                try {
+                    const doc = await this.db.collection('dados').doc('principal').get();
+                    if (doc.exists) {
+                        const d = doc.data();
+                        Object.assign(this.dados, {
+                            contadorPrincipalAgua: d.contadorPrincipalAgua || this.dados.contadorPrincipalAgua,
+                            contadorPrincipalLuz: d.contadorPrincipalLuz || this.dados.contadorPrincipalLuz,
+                            contadoresAgua: d.contadoresAgua || [],
+                            contadoresLuz: d.contadoresLuz || [],
+                            leituras: d.leituras || [],
+                            faturasAgua: d.faturasAgua || [],
+                            faturasLuz: d.faturasLuz || []
+                        });
+                        this.toast('Carregado', 'sucesso');
+                    }
+                    this.atualizar();
+                } catch (e) {
+                    this.toast('Erro ao carregar', 'erro');
+                }
+            },
+
+            async guardar() {
+                if (!this.fbOk) { this.toast('Firebase não conectado', 'erro'); return false; }
+                try {
+                    await this.db.collection('dados').doc('principal').set(this.dados);
+                    this.toast('Guardado', 'sucesso');
+                    return true;
+                } catch (e) {
+                    this.toast('Erro ao guardar', 'erro');
+                    return false;
+                }
+            },
+
+            async sincronizar() {
+                if (!this.fbOk) { this.toast('Firebase não conectado', 'erro'); return; }
+                document.getElementById('status-conexao').textContent = '🔄 Sincronizando...';
+                await this.carregar();
+                document.getElementById('status-conexao').textContent = '🟢 Conectado';
+            },
+
+            mudarTab(tab) {
+                ['contadores', 'leituras', 'faturas', 'calculos'].forEach(t => {
+                    const tabEl = document.getElementById(`tab-${t}`);
+                    const contentEl = document.getElementById(`content-${t}`);
+                    if (tabEl) tabEl.className = 'py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50';
+                    if (contentEl) contentEl.classList.add('hidden');
+                });
+                
+                const activeTab = document.getElementById(`tab-${tab}`);
+                const activeContent = document.getElementById(`content-${tab}`);
+                if (activeTab) activeTab.className = 'py-3 px-2 md:flex-1 md:py-4 text-sm md:text-base font-semibold bg-indigo-600 text-white';
+                if (activeContent) activeContent.classList.remove('hidden');
+                
+                if (tab === 'leituras') this.atualizarInputsLeituras();
+                if (tab === 'calculos') this.calcular();
+            },
+
+            exportarDados() {
+                const blob = new Blob([JSON.stringify(this.dados, null, 2)], {type: 'application/json'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                this.toast('Exportado', 'sucesso');
+            },
+
+            atualizarInputsLeituras() {
+                document.getElementById('inputs-agua').innerHTML = this.dados.contadoresAgua.map(c => 
+                    `<div><label class="block text-sm font-semibold mb-1">${c.descricao}</label>
+                    <input type="number" step="1" min="0" id="leitura-agua-${c.id}" placeholder="0" class="w-full px-4 py-2 border rounded-lg"></div>`
+                ).join('');
+                
+                document.getElementById('inputs-luz').innerHTML = this.dados.contadoresLuz.map(c => 
+                    `<div><label class="block text-sm font-semibold mb-1">${c.descricao}</label>
+                    <input type="number" step="1" min="0" id="leitura-luz-${c.id}" placeholder="0" class="w-full px-4 py-2 border rounded-lg"></div>`
+                ).join('');
+            },
+
+            calcular() {
+                const div = document.getElementById('resultados-calculos');
+                
+                if (this.dados.leituras.length < 2) {
+                    div.innerHTML = '<div class="bg-yellow-50 border rounded-lg p-6 text-center"><p class="font-semibold">⚠️ Necessita de pelo menos 2 leituras</p></div>';
+                    return;
+                }
+                if (this.dados.faturasAgua.length === 0 && this.dados.faturasLuz.length === 0) {
+                    div.innerHTML = '<div class="bg-yellow-50 border rounded-lg p-6 text-center"><p class="font-semibold">⚠️ Necessita de pelo menos uma fatura</p></div>';
+                    return;
+                }
+
+                const leiturasOrd = [...this.dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
+                
+                const mesesSet = new Set();
+                this.dados.faturasAgua.forEach(f => mesesSet.add(f.mes));
+                this.dados.faturasLuz.forEach(f => mesesSet.add(f.mes));
+                
+                const mesesDisponiveis = [];
+                Array.from(mesesSet).forEach(mes => {
+                    for (let i = 1; i < leiturasOrd.length; i++) {
+                        const ant = leiturasOrd[i - 1];
+                        const atu = leiturasOrd[i];
+                        const dAnt = new Date(ant.data);
+                        const dAtu = new Date(atu.data);
+                        const dMes = new Date(mes + '-01');
+                        
+                        if (dMes >= dAnt && dMes <= dAtu) {
+                            mesesDisponiveis.push({mes, idxAnt: i - 1, idxAtu: i});
+                            break;
+                        }
+                    }
+                });
+
+                if (mesesDisponiveis.length === 0) {
+                    div.innerHTML = `
+                        <div class="bg-yellow-50 border rounded-lg p-6">
+                            <p class="font-semibold text-yellow-800 mb-2">⚠️ Não foi possível associar faturas às leituras</p>
+                            <p class="text-sm text-gray-600">Certifique-se que tem leituras antes e durante o mês da fatura.</p>
+                        </div>`;
+                    return;
+                }
+
+                mesesDisponiveis.sort((a, b) => b.mes.localeCompare(a.mes));
+
+                div.innerHTML = `
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold mb-2">Selecione o mês:</label>
+                        <select id="select-mes-calculo" onchange="app.mostrarCalculo()" class="w-full px-4 py-2 border rounded-lg">
+                            ${mesesDisponiveis.map(m => 
+                                `<option value="${m.mes}">${new Date(m.mes + '-01').toLocaleDateString('pt-PT', {month: 'long', year: 'numeric'})}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div id="calculo-detalhado"></div>`;
+                
+                this.mostrarCalculo();
+            },
+
+            mostrarCalculo() {
+                const sel = document.getElementById('select-mes-calculo');
+                if (!sel) return;
+                
+                const mes = sel.value;
+                const fAgua = this.dados.faturasAgua.find(f => f.mes === mes);
+                const fLuz = this.dados.faturasLuz.find(f => f.mes === mes);
+                
+                const leiturasOrd = [...this.dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
+                let lAnt = null, lAtu = null;
+
+                for (let i = 1; i < leiturasOrd.length; i++) {
+                    const ant = leiturasOrd[i - 1];
+                    const atu = leiturasOrd[i];
+                    const dAnt = new Date(ant.data);
+                    const dAtu = new Date(atu.data);
+                    const dMes = new Date(mes + '-01');
+                    
+                    if (dMes >= dAnt && dMes <= dAtu) {
+                        lAnt = ant;
+                        lAtu = atu;
+                        break;
+                    }
+                }
+
+                if (!lAnt || !lAtu) return;
+
+                const cPrincipalAgua = lAtu.principalAgua - lAnt.principalAgua;
+                const cPrincipalLuz = lAtu.principalLuz - lAnt.principalLuz;
+
+                const consumosAgua = lAtu.agua.map(a => {
+                    const ant = lAnt.agua.find(x => x.contadorId === a.contadorId);
+                    return {descricao: a.descricao, consumo: a.valor - (ant ? ant.valor : 0)};
+                });
+
+                const consumosLuz = lAtu.luz.map(l => {
+                    const ant = lAnt.luz.find(x => x.contadorId === l.contadorId);
+                    return {descricao: l.descricao, consumo: l.valor - (ant ? ant.valor : 0)};
+                });
+
+                const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
+                const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
+                const cCasaAgua = cPrincipalAgua - somaAgua;
+                const cCasaLuz = cPrincipalLuz - somaLuz;
+
+                if (cCasaAgua < 0 || cCasaLuz < 0) {
+                    document.getElementById('calculo-detalhado').innerHTML = `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                            <p class="text-red-800 font-semibold">⚠️ ERRO: Soma dos terrenos é maior que o contador principal!</p>
+                        </div>`;
+                    return;
+                }
+
+                const custoCasaAgua = fAgua ? (cCasaAgua / cPrincipalAgua) * fAgua.valor : 0;
+                const custoCasaLuz = fLuz ? (cCasaLuz / cPrincipalLuz) * fLuz.valor : 0;
+                const custoCasaTotal = custoCasaAgua + custoCasaLuz;
+
+                const custosAgua = consumosAgua.map(c => ({
+                    ...c, custo: fAgua ? (c.consumo / cPrincipalAgua) * fAgua.valor : 0
+                }));
+
+                const custosLuz = consumosLuz.map(c => ({
+                    ...c, custo: fLuz ? (c.consumo / cPrincipalLuz) * fLuz.valor : 0
+                }));
+
+                const terrenosMap = new Map();
+                custosAgua.forEach(item => {
+                    terrenosMap.set(item.descricao, {descricao: item.descricao, agua: item, luz: null});
+                });
+                custosLuz.forEach(item => {
+                    if (terrenosMap.has(item.descricao)) {
+                        terrenosMap.get(item.descricao).luz = item;
+                    } else {
+                        terrenosMap.set(item.descricao, {descricao: item.descricao, agua: null, luz: item});
+                    }
+                });
+
+                const totalTerrenos = custosAgua.reduce((s, c) => s + c.custo, 0) + custosLuz.reduce((s, c) => s + c.custo, 0);
+                const totalGeral = totalTerrenos + custoCasaTotal;
+                const totalFaturas = (fAgua ? fAgua.valor : 0) + (fLuz ? fLuz.valor : 0);
+
+                document.getElementById('calculo-detalhado').innerHTML = `
+                    <div class="bg-indigo-50 border rounded-lg p-4 mb-6">
+                        <p class="font-semibold">Período: ${new Date(lAnt.data).toLocaleDateString('pt-PT')} a ${new Date(lAtu.data).toLocaleDateString('pt-PT')}</p>
+                        ${!fAgua || !fLuz ? `<p class="text-orange-700 text-sm mt-2">⚠️ ${!fAgua ? 'Fatura de água não registada' : ''} ${!fAgua && !fLuz ? ' | ' : ''} ${!fLuz ? 'Fatura de luz não registada' : ''}</p>` : ''}
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg p-4 md:p-6 mb-6">
+                        <h3 class="text-xl md:text-2xl font-bold text-purple-800 mb-4">🏠 CASA PRINCIPAL</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-white rounded-lg p-4 ${!fAgua ? 'opacity-60' : ''}">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-2xl">💧</span>
+                                    <span class="font-semibold">Água</span>
+                                    ${!fAgua ? '<span class="text-xs text-orange-600 font-bold ml-2">SEM FATURA</span>' : ''}
+                                </div>
+                                <p class="text-2xl font-bold text-blue-600">${cCasaAgua} m³</p>
+                                <p class="text-sm text-gray-500 mt-1">(${cPrincipalAgua} total - ${somaAgua} terrenos)</p>
+                                <p class="text-lg font-bold text-gray-700 mt-2">${custoCasaAgua.toFixed(2)} €</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 ${!fLuz ? 'opacity-60' : ''}">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-2xl">⚡</span>
+                                    <span class="font-semibold">Luz</span>
+                                    ${!fLuz ? '<span class="text-xs text-orange-600 font-bold ml-2">SEM FATURA</span>' : ''}
+                                </div>
+                                <p class="text-2xl font-bold text-yellow-600">${cCasaLuz} kWh</p>
+                                <p class="text-sm text-gray-500 mt-1">(${cPrincipalLuz} total - ${somaLuz} terrenos)</p>
+                                <p class="text-lg font-bold text-gray-700 mt-2">${custoCasaLuz.toFixed(2)} €</p>
+                            </div>
+                        </div>
+                        <div class="bg-purple-100 rounded-lg p-4 border-2 border-purple-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-bold text-purple-800">CASA A PAGAR:</span>
+                                <span class="text-3xl font-bold text-purple-600">${custoCasaTotal.toFixed(2)} €</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🏘️ TERRENOS</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        ${Array.from(terrenosMap.values()).map(t => {
+                            const custoAgua = t.agua ? t.agua.custo : 0;
+                            const custoLuz = t.luz ? t.luz.custo : 0;
+                            const consumoAgua = t.agua ? t.agua.consumo : 0;
+                            const consumoLuz = t.luz ? t.luz.consumo : 0;
+                            const totalTerreno = custoAgua + custoLuz;
+                            
+                            return `
+                                <div class="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <h4 class="text-lg font-bold text-gray-800 mb-3">${t.descricao}</h4>
+                                    <div class="space-y-2 mb-3">
+                                        ${t.agua ? `
+                                            <div class="flex justify-between items-center ${!fAgua ? 'opacity-60' : ''}">
+                                                <span class="text-sm text-gray-600">💧 Água: ${!fAgua ? '<span class="text-xs text-orange-600">(sem fatura)</span>' : ''}</span>
+                                                <span class="font-semibold">${consumoAgua} m³ → ${custoAgua.toFixed(2)} €</span>
+                                            </div>
+                                        ` : '<div class="flex justify-between"><span class="text-sm text-gray-400">💧 Água:</span><span class="text-sm text-gray-400">Sem contador</span></div>'}
+                                        ${t.luz ? `
+                                            <div class="flex justify-between items-center ${!fLuz ? 'opacity-60' : ''}">
+                                                <span class="text-sm text-gray-600">⚡ Luz: ${!fLuz ? '<span class="text-xs text-orange-600">(sem fatura)</span>' : ''}</span>
+                                                <span class="font-semibold">${consumoLuz} kWh → ${custoLuz.toFixed(2)} €</span>
+                                            </div>
+                                        ` : '<div class="flex justify-between"><span class="text-sm text-gray-400">⚡ Luz:</span><span class="text-sm text-gray-400">Sem contador</span></div>'}
+                                    </div>
+                                    <div class="pt-3 border-t border-gray-200">
+                                        <div class="flex justify-between items-center">
+                                            <span class="font-bold text-gray-700">A PAGAR:</span>
+                                            <span class="text-xl font-bold text-indigo-600">${totalTerreno.toFixed(2)} €</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="bg-gray-100 border-2 border-gray-400 rounded-lg p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">📊 VERIFICAÇÃO</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white rounded-lg p-4">
+                                <p class="text-sm text-gray-600 mb-1">Valor Faturas</p>
+                                <p class="text-2xl font-bold text-gray-800">${totalFaturas.toFixed(2)} €</p>
+                                ${!fAgua || !fLuz ? '<p class="text-xs text-orange-600 mt-1">(incompleto)</p>' : ''}
+                            </div>
+                            <div class="bg-white rounded-lg p-4">
+                                <p class="text-sm text-gray-600 mb-1">Total Calculado</p>
+                                <p class="text-2xl font-bold ${fAgua && fLuz && Math.abs(totalGeral - totalFaturas) < 0.01 ? 'text-green-600' : 'text-orange-600'}">
+                                    ${totalGeral.toFixed(2)} €
+                                </p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4">
+                                <p class="text-sm text-gray-600 mb-1">Diferença</p>
+                                <p class="text-2xl font-bold ${fAgua && fLuz && Math.abs(totalGeral - totalFaturas) < 0.01 ? 'text-green-600' : 'text-orange-600'}">
+                                    ${(totalGeral - totalFaturas).toFixed(2)} €
+                                </p>
+                            </div>
+                        </div>
+                        ${fAgua && fLuz && Math.abs(totalGeral - totalFaturas) < 0.01 ? 
+                            '<p class="text-green-700 font-semibold mt-4 text-center">✔ Valores conferem!</p>' : 
+                            fAgua && fLuz ?
+                            '<p class="text-red-700 font-semibold mt-4 text-center">⚠️ Diferença detectada!</p>' :
+                            '<p class="text-orange-700 font-semibold mt-4 text-center">ℹ️ Registe ambas as faturas para verificação completa</p>'
+                        }
+                    </div>
+                `;
+            },
+
+            atualizar() {
+                // Contador Principal Água
+                if (this.editandoContadorPrincipalAgua) {
+                    document.getElementById('contador-principal-agua').innerHTML = `
+                        <input type="text" id="edit-principal-agua" value="${this.dados.contadorPrincipalAgua.descricao}" 
+                            class="w-full px-3 py-2 border rounded mb-2">
+                        <div class="flex gap-2">
+                            <button onclick="app.salvarEdicaoContadorPrincipalAgua()" class="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm">✔ Guardar</button>
+                            <button onclick="app.cancelarEdicaoContadorPrincipalAgua()" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm">✕ Cancelar</button>
+                        </div>`;
+                } else {
+                    document.getElementById('contador-principal-agua').innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold">${this.dados.contadorPrincipalAgua.descricao}</p>
+                                <p class="text-sm text-gray-600">Contador geral</p>
+                            </div>
+                            <button onclick="app.editarContadorPrincipalAgua()" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">✏️</button>
+                        </div>`;
+                }
+                
+                // Contador Principal Luz
+                if (this.editandoContadorPrincipalLuz) {
+                    document.getElementById('contador-principal-luz').innerHTML = `
+                        <input type="text" id="edit-principal-luz" value="${this.dados.contadorPrincipalLuz.descricao}" 
+                            class="w-full px-3 py-2 border rounded mb-2">
+                        <div class="flex gap-2">
+                            <button onclick="app.salvarEdicaoContadorPrincipalLuz()" class="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm">✔ Guardar</button>
+                            <button onclick="app.cancelarEdicaoContadorPrincipalLuz()" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm">✕ Cancelar</button>
+                        </div>`;
+                } else {
+                    document.getElementById('contador-principal-luz').innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold">${this.dados.contadorPrincipalLuz.descricao}</p>
+                                <p class="text-sm text-gray-600">Contador geral</p>
+                            </div>
+                            <button onclick="app.editarContadorPrincipalLuz()" class="bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700">✏️</button>
+                        </div>`;
+                }
+
+                // Lista de contadores água
+                document.getElementById('lista-agua').innerHTML = this.dados.contadoresAgua.map(c => {
+                    if (this.editandoContadorAgua && this.editandoContadorAgua.id === c.id) {
+                        return `
+                            <div class="bg-blue-50 border-2 border-blue-500 rounded-lg p-3">
+                                <input type="text" value="${this.editandoContadorAgua.descricao}" 
+                                    onchange="app.editandoContadorAgua.descricao = this.value" 
+                                    class="w-full px-3 py-2 border rounded mb-2">
+                                <div class="flex gap-2">
+                                    <button onclick="app.salvarEdicaoContadorAgua()" class="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">✔</button>
+                                    <button onclick="app.cancelarEdicaoContadorAgua()" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">✕</button>
+                                </div>
+                            </div>`;
+                    }
+                    return `
+                        <div class="bg-blue-50 border rounded-lg p-3 flex justify-between items-center">
+                            <span class="font-semibold">${c.descricao}</span>
+                            <div class="flex gap-2">
+                                <button onclick="app.editarContadorAgua(${c.id})" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">✏️</button>
+                                <button onclick="app.removerContadorAgua(${c.id})" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">🗑️</button>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                // Lista de contadores luz
+                document.getElementById('lista-luz').innerHTML = this.dados.contadoresLuz.map(c => {
+                    if (this.editandoContadorLuz && this.editandoContadorLuz.id === c.id) {
+                        return `
+                            <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3">
+                                <input type="text" value="${this.editandoContadorLuz.descricao}" 
+                                    onchange="app.editandoContadorLuz.descricao = this.value" 
+                                    class="w-full px-3 py-2 border rounded mb-2">
+                                <div class="flex gap-2">
+                                    <button onclick="app.salvarEdicaoContadorLuz()" class="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">✔</button>
+                                    <button onclick="app.cancelarEdicaoContadorLuz()" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">✕</button>
+                                </div>
+                            </div>`;
+                    }
+                    return `
+                        <div class="bg-yellow-50 border rounded-lg p-3 flex justify-between items-center">
+                            <span class="font-semibold">${c.descricao}</span>
+                            <div class="flex gap-2">
+                                <button onclick="app.editarContadorLuz(${c.id})" class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700">✏️</button>
+                                <button onclick="app.removerContadorLuz(${c.id})" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">🗑️</button>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                // Histórico de Leituras
+                const histLeituras = document.getElementById('historico-leituras');
+                if (histLeituras) {
+                    if (this.dados.leituras.length > 0) {
+                        histLeituras.innerHTML = `
+                            <h3 class="text-lg font-bold mb-4">Histórico</h3>
+                            ${this.dados.leituras.map(l => {
+                                if (this.editandoLeitura && this.editandoLeitura.id === l.id) {
+                                    return `
+                                        <div class="bg-white border-2 border-indigo-500 rounded-lg p-4 mb-3">
+                                            <div class="mb-4">
+                                                <label class="block text-sm font-semibold mb-2">Data</label>
+                                                <input type="date" value="${this.editandoLeitura.data}" 
+                                                    onchange="app.editandoLeitura.data = this.value" 
+                                                    class="w-full px-4 py-2 border rounded-lg">
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-sm font-semibold mb-2">Casa Principal</label>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <input type="number" step="1" min="0" value="${this.editandoLeitura.principalAgua}" 
+                                                        onchange="app.editandoLeitura.principalAgua = parseInt(this.value)" 
+                                                        placeholder="Água" class="px-3 py-2 border rounded">
+                                                    <input type="number" step="1" min="0" value="${this.editandoLeitura.principalLuz}" 
+                                                        onchange="app.editandoLeitura.principalLuz = parseInt(this.value)" 
+                                                        placeholder="Luz" class="px-3 py-2 border rounded">
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                                <div>
+                                                    <p class="font-semibold text-blue-600 mb-2">Água Terrenos:</p>
+                                                    ${this.editandoLeitura.agua.map((a, idx) => `
+                                                        <div class="mb-2">
+                                                            <label class="text-xs text-gray-600">${a.descricao}</label>
+                                                            <input type="number" step="1" min="0" value="${a.valor}" 
+                                                                onchange="app.editandoLeitura.agua[${idx}].valor = parseInt(this.value)" 
+                                                                class="w-full px-3 py-1 text-sm border rounded">
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                                <div>
+                                                    <p class="font-semibold text-yellow-600 mb-2">Luz Terrenos:</p>
+                                                    ${this.editandoLeitura.luz.map((lz, idx) => `
+                                                        <div class="mb-2">
+                                                            <label class="text-xs text-gray-600">${lz.descricao}</label>
+                                                            <input type="number" step="1" min="0" value="${lz.valor}" 
+                                                                onchange="app.editandoLeitura.luz[${idx}].valor = parseInt(this.value)" 
+                                                                class="w-full px-3 py-1 text-sm border rounded">
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button onclick="app.salvarEdicaoLeitura()" class="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">✔ Guardar</button>
+                                                <button onclick="app.cancelarEdicaoLeitura()" class="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700">✕ Cancelar</button>
+                                            </div>
+                                        </div>`;
+                                }
+                                return `
+                                    <div class="bg-white border rounded-lg p-4 mb-3">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <span class="font-bold">${new Date(l.data).toLocaleDateString('pt-PT')}</span>
+                                            <div class="flex gap-2">
+                                                <button onclick="app.editarLeitura(${l.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">✏️</button>
+                                                <button onclick="app.eliminarLeitura(${l.id})" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">🗑️</button>
+                                            </div>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Casa: Água ${l.principalAgua} | Luz ${l.principalLuz}</p>
+                                    </div>`;
+                            }).join('')}`;
+                    } else {
+                        histLeituras.innerHTML = '';
+                    }
+                }
+
+                // Histórico de Faturas
+                const mesesMap = new Map();
+                this.dados.faturasAgua.forEach(f => {
+                    if (!mesesMap.has(f.mes)) mesesMap.set(f.mes, {mes: f.mes, agua: f, luz: null});
+                    else mesesMap.get(f.mes).agua = f;
+                });
+                this.dados.faturasLuz.forEach(f => {
+                    if (!mesesMap.has(f.mes)) mesesMap.set(f.mes, {mes: f.mes, agua: null, luz: f});
+                    else mesesMap.get(f.mes).luz = f;
+                });
+
+                const meses = Array.from(mesesMap.values()).sort((a, b) => b.mes.localeCompare(a.mes));
+                
+                if (meses.length > 0) {
+                    document.getElementById('historico-faturas').innerHTML = `
+                        <h3 class="text-lg font-bold mb-4">Histórico de Faturas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${meses.map(m => `
+                                <div class="bg-white border rounded-lg p-4">
+                                    <p class="font-bold mb-3">${new Date(m.mes + '-01').toLocaleDateString('pt-PT', {month: 'long', year: 'numeric'})}</p>
+                                    ${m.agua ? (this.editandoFaturaAgua && this.editandoFaturaAgua.id === m.agua.id ? `
+                                        <div class="bg-blue-50 rounded p-3 mb-2">
+                                            <p class="text-sm font-semibold text-blue-800 mb-2">💧 Editar Água</p>
+                                            <input type="number" step="0.01" min="0" value="${this.editandoFaturaAgua.valor}" 
+                                                onchange="app.editandoFaturaAgua.valor = parseFloat(this.value)" 
+                                                class="w-full px-3 py-2 border rounded mb-2" placeholder="Valor (€)">
+                                            <div class="flex gap-2">
+                                                <button onclick="app.salvarEdicaoFaturaAgua()" class="flex-1 bg-green-600 text-white px-2 py-1 rounded text-sm hover:bg-green-700">✔ Guardar</button>
+                                                <button onclick="app.cancelarEdicaoFaturaAgua()" class="flex-1 bg-gray-600 text-white px-2 py-1 rounded text-sm hover:bg-gray-700">✕ Cancelar</button>
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <div class="bg-blue-50 rounded p-3 mb-2">
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-blue-800">💧 Água</p>
+                                                    <p class="text-lg font-bold">${m.agua.valor.toFixed(2)} €</p>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <button onclick="app.editarFaturaAgua(${m.agua.id})" class="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700">✏️</button>
+                                                    <button onclick="app.eliminarFaturaAgua(${m.agua.id})" class="bg-red-600 text-white px-2 py-1 rounded text-sm hover:bg-red-700">🗑️</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `) : '<div class="bg-gray-50 rounded p-3 mb-2 border-2 border-dashed"><p class="text-sm text-gray-500 text-center">💧 Água não registada</p></div>'}
+                                    ${m.luz ? (this.editandoFaturaLuz && this.editandoFaturaLuz.id === m.luz.id ? `
+                                        <div class="bg-yellow-50 rounded p-3">
+                                            <p class="text-sm font-semibold text-yellow-800 mb-2">⚡ Editar Luz</p>
+                                            <input type="number" step="0.01" min="0" value="${this.editandoFaturaLuz.valor}" 
+                                                onchange="app.editandoFaturaLuz.valor = parseFloat(this.value)" 
+                                                class="w-full px-3 py-2 border rounded mb-2" placeholder="Valor (€)">
+                                            <div class="flex gap-2">
+                                                <button onclick="app.salvarEdicaoFaturaLuz()" class="flex-1 bg-green-600 text-white px-2 py-1 rounded text-sm hover:bg-green-700">✔ Guardar</button>
+                                                <button onclick="app.cancelarEdicaoFaturaLuz()" class="flex-1 bg-gray-600 text-white px-2 py-1 rounded text-sm hover:bg-gray-700">✕ Cancelar</button>
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <div class="bg-yellow-50 rounded p-3">
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-yellow-800">⚡ Luz</p>
+                                                    <p class="text-lg font-bold">${m.luz.valor.toFixed(2)} €</p>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <button onclick="app.editarFaturaLuz(${m.luz.id})" class="bg-yellow-600 text-white px-2 py-1 rounded text-sm hover:bg-yellow-700">✏️</button>
+                                                    <button onclick="app.eliminarFaturaLuz(${m.luz.id})" class="bg-red-600 text-white px-2 py-1 rounded text-sm hover:bg-red-700">🗑️</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `) : '<div class="bg-gray-50 rounded p-3 border-2 border-dashed"><p class="text-sm text-gray-500 text-center">⚡ Luz não registada</p></div>'}
+                                    ${m.agua && m.luz && !this.editandoFaturaAgua && !this.editandoFaturaLuz ? `
+                                        <div class="mt-3 pt-3 border-t">
+                                            <div class="flex justify-between">
+                                                <span class="font-semibold">Total:</span>
+                                                <span class="text-xl font-bold text-indigo-600">${(m.agua.valor + m.luz.valor).toFixed(2)} €</span>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>`;
+                }
+            },
+
+            // Funções de gestão de contadores
+            async adicionarContadorAgua() {
+                const desc = this.validarTexto(document.getElementById('nova-agua').value, 'Nome');
+                if (!desc) return;
+                if (this.dados.contadoresAgua.some(c => c.descricao.toLowerCase() === desc.toLowerCase())) {
+                    this.toast('Nome duplicado', 'aviso');
+                    return;
+                }
+                this.dados.contadoresAgua.push({id: Date.now(), descricao: desc});
+                if (await this.guardar()) {
+                    document.getElementById('nova-agua').value = '';
+                    this.atualizar();
+                }
+            },
+
+            async adicionarContadorLuz() {
+                const desc = this.validarTexto(document.getElementById('nova-luz').value, 'Nome');
+                if (!desc) return;
+                if (this.dados.contadoresLuz.some(c => c.descricao.toLowerCase() === desc.toLowerCase())) {
+                    this.toast('Nome duplicado', 'aviso');
+                    return;
+                }
+                this.dados.contadoresLuz.push({id: Date.now(), descricao: desc});
+                if (await this.guardar()) {
+                    document.getElementById('nova-luz').value = '';
+                    this.atualizar();
+                }
+            },
+
+            async removerContadorAgua(id) {
+                if (!confirm('Remover?')) return;
+                this.dados.contadoresAgua = this.dados.contadoresAgua.filter(c => c.id !== id);
+                if (await this.guardar()) this.atualizar();
+            },
+
+            async removerContadorLuz(id) {
+                if (!confirm('Remover?')) return;
+                this.dados.contadoresLuz = this.dados.contadoresLuz.filter(c => c.id !== id);
+                if (await this.guardar()) this.atualizar();
+            },
+
+            editarContadorAgua(id) {
+                const contador = this.dados.contadoresAgua.find(c => c.id === id);
+                if (!contador) return;
+                this.editandoContadorAgua = JSON.parse(JSON.stringify(contador));
+                this.atualizar();
+            },
+
+            async salvarEdicaoContadorAgua() {
+                if (!this.editandoContadorAgua) return;
+                const idx = this.dados.contadoresAgua.findIndex(c => c.id === this.editandoContadorAgua.id);
+                if (idx === -1) return;
+                this.dados.contadoresAgua[idx] = this.editandoContadorAgua;
+                if (await this.guardar()) {
+                    this.editandoContadorAgua = null;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoContadorAgua() {
+                this.editandoContadorAgua = null;
+                this.atualizar();
+            },
+
+            editarContadorLuz(id) {
+                const contador = this.dados.contadoresLuz.find(c => c.id === id);
+                if (!contador) return;
+                this.editandoContadorLuz = JSON.parse(JSON.stringify(contador));
+                this.atualizar();
+            },
+
+            async salvarEdicaoContadorLuz() {
+                if (!this.editandoContadorLuz) return;
+                const idx = this.dados.contadoresLuz.findIndex(c => c.id === this.editandoContadorLuz.id);
+                if (idx === -1) return;
+                this.dados.contadoresLuz[idx] = this.editandoContadorLuz;
+                if (await this.guardar()) {
+                    this.editandoContadorLuz = null;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoContadorLuz() {
+                this.editandoContadorLuz = null;
+                this.atualizar();
+            },
+
+            editarContadorPrincipalAgua() {
+                this.editandoContadorPrincipalAgua = true;
+                this.atualizar();
+            },
+
+            async salvarEdicaoContadorPrincipalAgua() {
+                const desc = this.validarTexto(document.getElementById('edit-principal-agua').value, 'Descrição');
+                if (!desc) return;
+                this.dados.contadorPrincipalAgua.descricao = desc;
+                if (await this.guardar()) {
+                    this.editandoContadorPrincipalAgua = false;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoContadorPrincipalAgua() {
+                this.editandoContadorPrincipalAgua = false;
+                this.atualizar();
+            },
+
+            editarContadorPrincipalLuz() {
+                this.editandoContadorPrincipalLuz = true;
+                this.atualizar();
+            },
+
+            async salvarEdicaoContadorPrincipalLuz() {
+                const desc = this.validarTexto(document.getElementById('edit-principal-luz').value, 'Descrição');
+                if (!desc) return;
+                this.dados.contadorPrincipalLuz.descricao = desc;
+                if (await this.guardar()) {
+                    this.editandoContadorPrincipalLuz = false;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoContadorPrincipalLuz() {
+                this.editandoContadorPrincipalLuz = false;
+                this.atualizar();
+            },
+
+            // Funções de leituras
+            async registarLeitura() {
+                const data = document.getElementById('data-leitura').value;
+                const pA = this.validarInt(document.getElementById('leitura-principal-agua').value, 'Água casa');
+                const pL = this.validarInt(document.getElementById('leitura-principal-luz').value, 'Luz casa');
+                if (!data || pA === null || pL === null) return;
+
+                const agua = [], luz = [];
+                for (const c of this.dados.contadoresAgua) {
+                    const v = this.validarInt(document.getElementById(`leitura-agua-${c.id}`).value, `Água ${c.descricao}`);
+                    if (v === null) return;
+                    agua.push({contadorId: c.id, descricao: c.descricao, valor: v});
+                }
+                for (const c of this.dados.contadoresLuz) {
+                    const v = this.validarInt(document.getElementById(`leitura-luz-${c.id}`).value, `Luz ${c.descricao}`);
+                    if (v === null) return;
+                    luz.push({contadorId: c.id, descricao: c.descricao, valor: v});
+                }
+
+                this.dados.leituras.push({id: Date.now(), data, principalAgua: pA, principalLuz: pL, agua, luz});
+                this.dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
+                
+                if (await this.guardar()) {
+                    document.getElementById('leitura-principal-agua').value = '';
+                    document.getElementById('leitura-principal-luz').value = '';
+                    this.atualizar();
+                }
+            },
+
+            async eliminarLeitura(id) {
+                if (!confirm('Eliminar?')) return;
+                this.dados.leituras = this.dados.leituras.filter(l => l.id !== id);
+                if (await this.guardar()) this.atualizar();
+            },
+
+            editarLeitura(id) {
+                const leitura = this.dados.leituras.find(l => l.id === id);
+                if (!leitura) return;
+                this.editandoLeitura = JSON.parse(JSON.stringify(leitura));
+                this.atualizar();
+            },
+
+            async salvarEdicaoLeitura() {
+                if (!this.editandoLeitura) return;
+                const idx = this.dados.leituras.findIndex(l => l.id === this.editandoLeitura.id);
+                if (idx === -1) return;
+                this.dados.leituras[idx] = this.editandoLeitura;
+                this.dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
+                if (await this.guardar()) {
+                    this.editandoLeitura = null;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoLeitura() {
+                this.editandoLeitura = null;
+                this.atualizar();
+            },
+
+            // Funções de faturas
+            async registarFaturaAgua() {
+                const mes = document.getElementById('mes-fatura-agua').value;
+                const valor = this.validarNum(document.getElementById('valor-agua').value, 'Valor');
+                if (!mes || valor === null) return;
+                if (this.dados.faturasAgua.some(f => f.mes === mes)) {
+                    this.toast('Fatura já existe', 'aviso');
+                    return;
+                }
+                this.dados.faturasAgua.push({id: Date.now(), mes, valor});
+                this.dados.faturasAgua.sort((a, b) => b.mes.localeCompare(a.mes));
+                if (await this.guardar()) {
+                    document.getElementById('valor-agua').value = '';
+                    this.atualizar();
+                }
+            },
+
+            async registarFaturaLuz() {
+                const mes = document.getElementById('mes-fatura-luz').value;
+                const valor = this.validarNum(document.getElementById('valor-luz').value, 'Valor');
+                if (!mes || valor === null) return;
+                if (this.dados.faturasLuz.some(f => f.mes === mes)) {
+                    this.toast('Fatura já existe', 'aviso');
+                    return;
+                }
+                this.dados.faturasLuz.push({id: Date.now(), mes, valor});
+                this.dados.faturasLuz.sort((a, b) => b.mes.localeCompare(a.mes));
+                if (await this.guardar()) {
+                    document.getElementById('valor-luz').value = '';
+                    this.atualizar();
+                }
+            },
+
+            async eliminarFaturaAgua(id) {
+                if (!confirm('Eliminar?')) return;
+                this.dados.faturasAgua = this.dados.faturasAgua.filter(f => f.id !== id);
+                if (await this.guardar()) this.atualizar();
+            },
+
+            editarFaturaAgua(id) {
+                const fatura = this.dados.faturasAgua.find(f => f.id === id);
+                if (!fatura) return;
+                this.editandoFaturaAgua = JSON.parse(JSON.stringify(fatura));
+                this.atualizar();
+            },
+
+            async salvarEdicaoFaturaAgua() {
+                if (!this.editandoFaturaAgua) return;
+                const idx = this.dados.faturasAgua.findIndex(f => f.id === this.editandoFaturaAgua.id);
+                if (idx === -1) return;
+                this.dados.faturasAgua[idx] = this.editandoFaturaAgua;
+                this.dados.faturasAgua.sort((a, b) => b.mes.localeCompare(a.mes));
+                if (await this.guardar()) {
+                    this.editandoFaturaAgua = null;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoFaturaAgua() {
+                this.editandoFaturaAgua = null;
+                this.atualizar();
+            },
+
+            async eliminarFaturaLuz(id) {
+                if (!confirm('Eliminar?')) return;
+                this.dados.faturasLuz = this.dados.faturasLuz.filter(f => f.id !== id);
+                if (await this.guardar()) this.atualizar();
+            },
+
+            editarFaturaLuz(id) {
+                const fatura = this.dados.faturasLuz.find(f => f.id === id);
+                if (!fatura) return;
+                this.editandoFaturaLuz = JSON.parse(JSON.stringify(fatura));
+                this.atualizar();
+            },
+
+            async salvarEdicaoFaturaLuz() {
+                if (!this.editandoFaturaLuz) return;
+                const idx = this.dados.faturasLuz.findIndex(f => f.id === this.editandoFaturaLuz.id);
+                if (idx === -1) return;
+                this.dados.faturasLuz[idx] = this.editandoFaturaLuz;
+                this.dados.faturasLuz.sort((a, b) => b.mes.localeCompare(a.mes));
+                if (await this.guardar()) {
+                    this.editandoFaturaLuz = null;
+                    this.atualizar();
+                }
+            },
+
+            cancelarEdicaoFaturaLuz() {
+                this.editandoFaturaLuz = null;
+                this.atualizar();
+            },
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            inicializarFirebase();
+            app.init();
             document.getElementById('data-leitura').valueAsDate = new Date();
             const hoje = new Date();
-            document.getElementById('mes-fatura').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+            const mes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('mes-fatura-agua').value = mes;
+            document.getElementById('mes-fatura-luz').value = mes;
         });
-
-        function inicializarFirebase() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(FIREBASE_CONFIG);
-                }
-                db = firebase.firestore();
-                firebaseConfigured = true;
-                atualizarStatus('🟢 Conectado');
-                carregarDadosFirebase();
-            } catch (e) {
-                console.error('Erro Firebase:', e);
-                atualizarStatus('🔴 Erro: ' + e.message);
-                firebaseConfigured = false;
-                renderizar();
-            }
-        }
-
-        function atualizarStatus(texto) {
-            document.getElementById('status-conexao').textContent = texto;
-        }
-
-        async function carregarDadosFirebase() {
-            if (!firebaseConfigured) return;
-            
-            try {
-                const docRef = await db.collection('dados').doc('principal').get();
-                if (docRef.exists) {
-                    const data = docRef.data();
-                    dados.contadorPrincipalAgua = data.contadorPrincipalAgua || dados.contadorPrincipalAgua;
-                    dados.contadorPrincipalLuz = data.contadorPrincipalLuz || dados.contadorPrincipalLuz;
-                    dados.contadoresAgua = data.contadoresAgua || [];
-                    dados.contadoresLuz = data.contadoresLuz || [];
-                    dados.leituras = data.leituras || [];
-                    dados.faturas = data.faturas || [];
-                }
-                renderizar();
-            } catch (e) {
-                console.error('Erro ao carregar:', e);
-                atualizarStatus('🔴 Erro ao carregar: ' + e.message);
-            }
-        }
-
-        async function guardarFirebase() {
-            if (!firebaseConfigured) {
-                alert('Firebase não conectado');
-                return false;
-            }
-
-            try {
-                await db.collection('dados').doc('principal').set(dados);
-                return true;
-            } catch (e) {
-                console.error('Erro ao guardar:', e);
-                alert('Erro ao guardar: ' + e.message);
-                return false;
-            }
-        }
-
-        async function sincronizar() {
-            if (!firebaseConfigured) return alert('Firebase não conectado');
-            atualizarStatus('🔄 Sincronizando...');
-            await carregarDadosFirebase();
-            atualizarStatus('🟢 Conectado');
-        }
-
-        function mudarTab(tab) {
-            ['principal', 'terrenos', 'leituras', 'faturas', 'calculos'].forEach(t => {
-                const tabEl = document.getElementById(`tab-${t}`);
-                const contentEl = document.getElementById(`content-${t}`);
-                if (tabEl && contentEl) {
-                    tabEl.className = 'py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold text-gray-600 hover:bg-gray-50 whitespace-nowrap';
-                    contentEl.classList.add('hidden');
-                }
-            });
-            
-            const activeTab = document.getElementById(`tab-${tab}`);
-            const activeContent = document.getElementById(`content-${tab}`);
-            if (activeTab && activeContent) {
-                activeTab.className = 'py-3 px-2 md:flex-1 md:py-4 md:px-4 text-sm md:text-base font-semibold bg-indigo-600 text-white whitespace-nowrap';
-                activeContent.classList.remove('hidden');
-            }
-            
-            if (tab === 'leituras') renderizarInputsLeituras();
-            if (tab === 'calculos') calcularConsumos();
-        }
-
-        async function editarContadorPrincipal(tipo) {
-            const novaDescricao = prompt(
-                `Nova descrição para o contador ${tipo === 'agua' ? 'de água' : 'de luz'}:`,
-                tipo === 'agua' ? dados.contadorPrincipalAgua.descricao : dados.contadorPrincipalLuz.descricao
-            );
-            
-            if (novaDescricao && novaDescricao.trim()) {
-                if (tipo === 'agua') {
-                    dados.contadorPrincipalAgua.descricao = novaDescricao.trim();
-                } else {
-                    dados.contadorPrincipalLuz.descricao = novaDescricao.trim();
-                }
-                if (await guardarFirebase()) renderizar();
-            }
-        }
-
-        async function adicionarContadorAgua() {
-            const input = document.getElementById('nova-agua');
-            if (!input.value.trim()) return alert('Insira um nome');
-            const novoId = Date.now();
-            dados.contadoresAgua.push({ id: novoId, descricao: input.value.trim() });
-            if (await guardarFirebase()) {
-                input.value = '';
-                renderizar();
-            }
-        }
-
-        async function adicionarContadorLuz() {
-            const input = document.getElementById('nova-luz');
-            if (!input.value.trim()) return alert('Insira um nome');
-            const novoId = Date.now();
-            dados.contadoresLuz.push({ id: novoId, descricao: input.value.trim() });
-            if (await guardarFirebase()) {
-                input.value = '';
-                renderizar();
-            }
-        }
-
-        function editarContadorAgua(id) {
-            editandoContadorAgua = id;
-            renderizar();
-        }
-
-        function editarContadorLuz(id) {
-            editandoContadorLuz = id;
-            renderizar();
-        }
-
-        async function salvarEdicaoContadorAgua(id) {
-            const novaDescricao = document.getElementById(`edit-agua-${id}`).value.trim();
-            if (!novaDescricao) return alert('Insira uma descrição');
-            dados.contadoresAgua = dados.contadoresAgua.map(c => 
-                c.id === id ? { ...c, descricao: novaDescricao } : c
-            );
-            if (await guardarFirebase()) {
-                editandoContadorAgua = null;
-                renderizar();
-            }
-        }
-
-        async function salvarEdicaoContadorLuz(id) {
-            const novaDescricao = document.getElementById(`edit-luz-${id}`).value.trim();
-            if (!novaDescricao) return alert('Insira uma descrição');
-            dados.contadoresLuz = dados.contadoresLuz.map(c => 
-                c.id === id ? { ...c, descricao: novaDescricao } : c
-            );
-            if (await guardarFirebase()) {
-                editandoContadorLuz = null;
-                renderizar();
-            }
-        }
-
-        function cancelarEdicaoAgua() {
-            editandoContadorAgua = null;
-            renderizar();
-        }
-
-        function cancelarEdicaoLuz() {
-            editandoContadorLuz = null;
-            renderizar();
-        }
-
-        async function removerContadorAgua(id) {
-            if (!confirm('Remover este contador?')) return;
-            dados.contadoresAgua = dados.contadoresAgua.filter(c => c.id !== id);
-            if (await guardarFirebase()) renderizar();
-        }
-
-        async function removerContadorLuz(id) {
-            if (!confirm('Remover este contador?')) return;
-            dados.contadoresLuz = dados.contadoresLuz.filter(c => c.id !== id);
-            if (await guardarFirebase()) renderizar();
-        }
-
-        async function registarLeitura() {
-            const dataLeitura = document.getElementById('data-leitura').value;
-            const principalAgua = parseInt(document.getElementById('leitura-principal-agua').value || 0);
-            const principalLuz = parseInt(document.getElementById('leitura-principal-luz').value || 0);
-
-            if (!principalAgua || !principalLuz) {
-                return alert('Preencha as leituras do contador principal');
-            }
-
-            const leituraAgua = dados.contadoresAgua.map(c => ({
-                contadorId: c.id,
-                descricao: c.descricao,
-                valor: parseInt(document.getElementById(`leitura-agua-${c.id}`).value || 0)
-            }));
-            
-            const leituraLuz = dados.contadoresLuz.map(c => ({
-                contadorId: c.id,
-                descricao: c.descricao,
-                valor: parseInt(document.getElementById(`leitura-luz-${c.id}`).value || 0)
-            }));
-
-            if (leituraAgua.some(l => !l.valor) || leituraLuz.some(l => !l.valor)) {
-                return alert('Preencha todas as leituras dos terrenos');
-            }
-
-            dados.leituras.push({
-                id: Date.now(),
-                data: dataLeitura,
-                principalAgua,
-                principalLuz,
-                agua: leituraAgua,
-                luz: leituraLuz
-            });
-            dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
-            
-            if (await guardarFirebase()) {
-                alert('Leitura registada!');
-                document.getElementById('leitura-principal-agua').value = '';
-                document.getElementById('leitura-principal-luz').value = '';
-                renderizar();
-            }
-        }
-
-        function editarLeitura(id) {
-            const leitura = dados.leituras.find(l => l.id === id);
-            if (!leitura) return;
-            editandoLeitura = JSON.parse(JSON.stringify(leitura));
-            renderizar();
-        }
-
-        async function salvarEdicaoLeitura() {
-            if (!editandoLeitura) return;
-            dados.leituras = dados.leituras.map(l => 
-                l.id === editandoLeitura.id ? editandoLeitura : l
-            );
-            dados.leituras.sort((a, b) => new Date(b.data) - new Date(a.data));
-            if (await guardarFirebase()) {
-                editandoLeitura = null;
-                renderizar();
-            }
-        }
-
-        function cancelarEdicaoLeitura() {
-            editandoLeitura = null;
-            renderizar();
-        }
-
-        async function eliminarLeitura(id) {
-            if (!confirm('Eliminar esta leitura?')) return;
-            dados.leituras = dados.leituras.filter(l => l.id !== id);
-            if (await guardarFirebase()) renderizar();
-        }
-
-        async function registarFatura() {
-            const mes = document.getElementById('mes-fatura').value;
-            const agua = parseFloat(document.getElementById('valor-agua').value);
-            const luz = parseFloat(document.getElementById('valor-luz').value);
-
-            if (!agua || !luz) return alert('Preencha os valores');
-
-            dados.faturas.push({ id: Date.now(), mes, agua, luz });
-            dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
-            
-            if (await guardarFirebase()) {
-                document.getElementById('valor-agua').value = '';
-                document.getElementById('valor-luz').value = '';
-                alert('Fatura registada!');
-                renderizar();
-            }
-        }
-
-        function editarFatura(id) {
-            const fatura = dados.faturas.find(f => f.id === id);
-            if (!fatura) return;
-            editandoFatura = JSON.parse(JSON.stringify(fatura));
-            renderizar();
-        }
-
-        async function salvarEdicaoFatura() {
-            if (!editandoFatura) return;
-            dados.faturas = dados.faturas.map(f => 
-                f.id === editandoFatura.id ? editandoFatura : f
-            );
-            dados.faturas.sort((a, b) => b.mes.localeCompare(a.mes));
-            if (await guardarFirebase()) {
-                editandoFatura = null;
-                renderizar();
-            }
-        }
-
-        function cancelarEdicaoFatura() {
-            editandoFatura = null;
-            renderizar();
-        }
-
-        async function eliminarFatura(id) {
-            if (!confirm('Eliminar esta fatura?')) return;
-            dados.faturas = dados.faturas.filter(f => f.id !== id);
-            if (await guardarFirebase()) renderizar();
-        }
-
-        function exportarDados() {
-            const dataStr = JSON.stringify(dados, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function exportarCalculos() {
-            if (dados.leituras.length < 2) {
-                return alert('Necessita de pelo menos 2 leituras para exportar cálculos');
-            }
-
-            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
-            let relatorio = '='.repeat(60) + '\n';
-            relatorio += '         RELATORIO DE CONSUMOS E CUSTOS\n';
-            relatorio += '='.repeat(60) + '\n\n';
-
-            dados.faturas.forEach(fatura => {
-                for (let i = 1; i < leiturasOrdenadas.length; i++) {
-                    const leituraAnterior = leiturasOrdenadas[i - 1];
-                    const leituraAtual = leiturasOrdenadas[i];
-                    
-                    const dataAnterior = new Date(leituraAnterior.data);
-                    const dataAtual = new Date(leituraAtual.data);
-                    const dataFatura = new Date(fatura.mes + '-01');
-                    
-                    if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
-                        const consumoPrincipalAgua = leituraAtual.principalAgua - leituraAnterior.principalAgua;
-                        const consumoPrincipalLuz = leituraAtual.principalLuz - leituraAnterior.principalLuz;
-
-                        const consumosAgua = leituraAtual.agua.map(atual => {
-                            const anterior = leituraAnterior.agua.find(a => a.contadorId === atual.contadorId);
-                            return { descricao: atual.descricao, consumo: atual.valor - (anterior ? anterior.valor : 0) };
-                        });
-
-                        const consumosLuz = leituraAtual.luz.map(atual => {
-                            const anterior = leituraAnterior.luz.find(l => l.contadorId === atual.contadorId);
-                            return { descricao: atual.descricao, consumo: atual.valor - (anterior ? anterior.valor : 0) };
-                        });
-
-                        const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
-                        const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
-                        const consumoCasaAgua = consumoPrincipalAgua - somaAgua;
-                        const consumoCasaLuz = consumoPrincipalLuz - somaLuz;
-
-                        const custoCasaAgua = (consumoCasaAgua / consumoPrincipalAgua) * fatura.agua;
-                        const custoCasaLuz = (consumoCasaLuz / consumoPrincipalLuz) * fatura.luz;
-
-                        relatorio += `MES: ${new Date(fatura.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}\n`;
-                        relatorio += `Periodo: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}\n`;
-                        relatorio += '-'.repeat(60) + '\n\n';
-
-                        relatorio += 'CASA PRINCIPAL\n';
-                        relatorio += `   Agua: ${consumoCasaAgua} (${consumoPrincipalAgua} total - ${somaAgua} terrenos)\n`;
-                        relatorio += `   Custo Agua: €${custoCasaAgua.toFixed(2)}\n`;
-                        relatorio += `   Luz: ${consumoCasaLuz} (${consumoPrincipalLuz} total - ${somaLuz} terrenos)\n`;
-                        relatorio += `   Custo Luz: €${custoCasaLuz.toFixed(2)}\n`;
-                        relatorio += `   TOTAL A PAGAR: €${(custoCasaAgua + custoCasaLuz).toFixed(2)}\n\n`;
-
-                        relatorio += 'TERRENOS\n';
-                        consumosAgua.forEach((itemAgua, idx) => {
-                            const itemLuz = consumosLuz[idx];
-                            const custoAgua = (itemAgua.consumo / consumoPrincipalAgua) * fatura.agua;
-                            const custoLuz = (itemLuz.consumo / consumoPrincipalLuz) * fatura.luz;
-                            relatorio += `   ${itemAgua.descricao}:\n`;
-                            relatorio += `      Agua: ${itemAgua.consumo} -> €${custoAgua.toFixed(2)}\n`;
-                            relatorio += `      Luz: ${itemLuz.consumo} -> €${custoLuz.toFixed(2)}\n`;
-                            relatorio += `      TOTAL: €${(custoAgua + custoLuz).toFixed(2)}\n\n`;
-                        });
-
-                        relatorio += 'VERIFICACAO\n';
-                        relatorio += `   Fatura Total: €${(fatura.agua + fatura.luz).toFixed(2)}\n\n`;
-                        relatorio += '='.repeat(60) + '\n\n';
-                        break;
-                    }
-                }
-            });
-
-            const blob = new Blob([relatorio], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `relatorio-calculos-${new Date().toISOString().split('T')[0]}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function renderizarInputsLeituras() {
-            document.getElementById('label-principal-agua').textContent = dados.contadorPrincipalAgua.descricao;
-            document.getElementById('label-principal-luz').textContent = dados.contadorPrincipalLuz.descricao;
-
-            document.getElementById('inputs-agua').innerHTML = dados.contadoresAgua.map(c => `
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">${c.descricao}</label>
-                    <input type="number" step="1" id="leitura-agua-${c.id}" placeholder="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                </div>
-            `).join('');
-
-            document.getElementById('inputs-luz').innerHTML = dados.contadoresLuz.map(c => `
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">${c.descricao}</label>
-                    <input type="number" step="1" id="leitura-luz-${c.id}" placeholder="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                </div>
-            `).join('');
-        }
-
-        function calcularConsumos() {
-            const div = document.getElementById('resultados-calculos');
-            
-            if (dados.leituras.length < 2) {
-                div.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Necessita de pelo menos 2 leituras</p></div>';
-                return;
-            }
-
-            if (dados.faturas.length === 0) {
-                div.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Necessita de pelo menos 1 fatura registada</p></div>';
-                return;
-            }
-
-            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
-            const faturasDisponiveis = [];
-            
-            dados.faturas.forEach(fatura => {
-                for (let i = 1; i < leiturasOrdenadas.length; i++) {
-                    const leituraAnterior = leiturasOrdenadas[i - 1];
-                    const leituraAtual = leiturasOrdenadas[i];
-                    
-                    const dataAnterior = new Date(leituraAnterior.data);
-                    const dataAtual = new Date(leituraAtual.data);
-                    const dataFatura = new Date(fatura.mes + '-01');
-                    
-                    if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
-                        faturasDisponiveis.push({
-                            ...fatura,
-                            leituraAtualIdx: i,
-                            leituraAnteriorIdx: i - 1
-                        });
-                        break;
-                    }
-                }
-            });
-
-            if (faturasDisponiveis.length === 0) {
-                div.innerHTML = `
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                        <p class="text-yellow-800 font-semibold mb-4">⚠️ Não foi possível associar faturas às leituras</p>
-                        <div class="text-sm space-y-2 text-gray-700">
-                            <p><strong>Faturas registadas:</strong></p>
-                            ${dados.faturas.map(f => `<p>• ${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>`).join('')}
-                            <p class="mt-4"><strong>Leituras registadas:</strong></p>
-                            ${leiturasOrdenadas.map(l => `<p>• ${new Date(l.data).toLocaleDateString('pt-PT')}</p>`).join('')}
-                            <p class="mt-4 text-xs text-gray-600">💡 Dica: Certifique-se que tem leituras antes e durante o mês da fatura.</p>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = `
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Selecione o mês para visualizar:</label>
-                    <select id="select-mes-calculo" onchange="mostrarCalculoMes()" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                        ${faturasDisponiveis.map(f => `
-                            <option value="${f.mes}">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</option>
-                        `).join('')}
-                    </select>
-                </div>
-                <div id="calculo-detalhado"></div>
-            `;
-
-            div.innerHTML = html;
-            mostrarCalculoMes();
-        }
-
-        function mostrarCalculoMes() {
-            const selectElement = document.getElementById('select-mes-calculo');
-            if (!selectElement) return;
-            
-            const mesSelecionado = selectElement.value;
-            const fatura = dados.faturas.find(f => f.mes === mesSelecionado);
-            if (!fatura) return;
-
-            const leiturasOrdenadas = [...dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
-            let leituraAtual = null;
-            let leituraAnterior = null;
-
-            for (let i = 1; i < leiturasOrdenadas.length; i++) {
-                const anterior = leiturasOrdenadas[i - 1];
-                const atual = leiturasOrdenadas[i];
-                
-                const dataAnterior = new Date(anterior.data);
-                const dataAtual = new Date(atual.data);
-                const dataFatura = new Date(mesSelecionado + '-01');
-                
-                if (dataFatura >= dataAnterior && dataFatura <= dataAtual) {
-                    leituraAnterior = anterior;
-                    leituraAtual = atual;
-                    break;
-                }
-            }
-
-            if (!leituraAtual || !leituraAnterior) {
-                document.getElementById('calculo-detalhado').innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><p class="text-yellow-800 font-semibold">Sem leituras correspondentes para este mês</p></div>';
-                return;
-            }
-
-            const consumoPrincipalAgua = leituraAtual.principalAgua - leituraAnterior.principalAgua;
-            const consumoPrincipalLuz = leituraAtual.principalLuz - leituraAnterior.principalLuz;
-
-            const consumosAgua = leituraAtual.agua.map(atual => {
-                const anterior = leituraAnterior.agua.find(a => a.contadorId === atual.contadorId);
-                return {
-                    descricao: atual.descricao,
-                    consumo: atual.valor - (anterior ? anterior.valor : 0)
-                };
-            });
-
-            const consumosLuz = leituraAtual.luz.map(atual => {
-                const anterior = leituraAnterior.luz.find(l => l.contadorId === atual.contadorId);
-                return {
-                    descricao: atual.descricao,
-                    consumo: atual.valor - (anterior ? anterior.valor : 0)
-                };
-            });
-
-            const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
-            const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
-
-            const consumoCasaAgua = consumoPrincipalAgua - somaAgua;
-            const consumoCasaLuz = consumoPrincipalLuz - somaLuz;
-
-            if (consumoCasaAgua < 0 || consumoCasaLuz < 0) {
-                document.getElementById('calculo-detalhado').innerHTML = `
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <p class="text-red-800 font-semibold mb-2">⚠️ ERRO: Soma dos terrenos é maior que o contador principal!</p>
-                        <p class="text-red-700 text-sm">Verifique as leituras.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const custoCasaAgua = (consumoCasaAgua / consumoPrincipalAgua) * fatura.agua;
-            const custoCasaLuz = (consumoCasaLuz / consumoPrincipalLuz) * fatura.luz;
-            const custoCasaTotal = custoCasaAgua + custoCasaLuz;
-
-            const custosAgua = consumosAgua.map(c => ({
-                ...c,
-                custo: (c.consumo / consumoPrincipalAgua) * fatura.agua
-            }));
-
-            const custosLuz = consumosLuz.map(c => ({
-                ...c,
-                custo: (c.consumo / consumoPrincipalLuz) * fatura.luz
-            }));
-
-            const totalPagoTerrenos = custosAgua.reduce((s, c) => s + c.custo, 0) + custosLuz.reduce((s, c) => s + c.custo, 0);
-            const totalGeral = totalPagoTerrenos + custoCasaTotal;
-
-            document.getElementById('calculo-detalhado').innerHTML = `
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                    <p class="text-indigo-800 font-semibold text-sm md:text-base">
-                        Período: ${new Date(leituraAnterior.data).toLocaleDateString('pt-PT')} a ${new Date(leituraAtual.data).toLocaleDateString('pt-PT')}
-                    </p>
-                </div>
-
-                <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg p-4 md:p-6 mb-6">
-                    <h3 class="text-xl md:text-2xl font-bold text-purple-800 mb-4">🏠 CASA PRINCIPAL</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div class="bg-white rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-2xl">💧</span>
-                                <span class="font-semibold text-gray-700">Água</span>
-                            </div>
-                            <p class="text-xl md:text-2xl font-bold text-blue-600">${consumoCasaAgua}</p>
-                            <p class="text-sm text-gray-500 mt-1">(${consumoPrincipalAgua} total - ${somaAgua} terrenos)</p>
-                            <p class="text-lg text-gray-700 mt-2">${custoCasaAgua.toFixed(2)} €</p>
-                        </div>
-                        <div class="bg-white rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-2xl">⚡</span>
-                                <span class="font-semibold text-gray-700">Luz</span>
-                            </div>
-                            <p class="text-xl md:text-2xl font-bold text-yellow-600">${consumoCasaLuz}</p>
-                            <p class="text-sm text-gray-500 mt-1">(${consumoPrincipalLuz} total - ${somaLuz} terrenos)</p>
-                            <p class="text-lg text-gray-700 mt-2">${custoCasaLuz.toFixed(2)} €</p>
-                        </div>
-                    </div>
-                    <div class="bg-purple-100 rounded-lg p-4 border-2 border-purple-300">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-bold text-purple-800">CASA A PAGAR:</span>
-                            <span class="text-2xl md:text-3xl font-bold text-purple-600">${custoCasaTotal.toFixed(2)} €</span>
-                        </div>
-                    </div>
-                </div>
-
-                <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🏘️ TERRENOS</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    ${custosAgua.map((itemAgua, idx) => {
-                        const itemLuz = custosLuz[idx];
-                        const totalTerreno = itemAgua.custo + itemLuz.custo;
-                        return `
-                            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                                <h4 class="text-lg font-bold text-gray-800 mb-3">${itemAgua.descricao}</h4>
-                                <div class="space-y-2 mb-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">💧 Água:</span>
-                                        <span class="font-semibold">${itemAgua.consumo} → ${itemAgua.custo.toFixed(2)} €</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">⚡ Luz:</span>
-                                        <span class="font-semibold">${itemLuz.consumo} → ${itemLuz.custo.toFixed(2)} €</span>
-                                    </div>
-                                </div>
-                                <div class="pt-3 border-t border-gray-200">
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-bold text-gray-700">A PAGAR:</span>
-                                        <span class="text-xl font-bold text-indigo-600">${totalTerreno.toFixed(2)} €</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-
-                <div class="bg-gray-100 border-2 border-gray-400 rounded-lg p-4 md:p-6">
-                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">📊 VERIFICAÇÃO E TOTAIS</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-1">Valor Fatura</p>
-                            <p class="text-xl md:text-2xl font-bold text-gray-800">${(fatura.agua + fatura.luz).toFixed(2)} €</p>
-                        </div>
-                        <div class="bg-white rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-1">Total Calculado</p>
-                            <p class="text-xl md:text-2xl font-bold ${Math.abs(totalGeral - (fatura.agua + fatura.luz)) < 0.01 ? 'text-green-600' : 'text-red-600'}">
-                                ${totalGeral.toFixed(2)} €
-                            </p>
-                        </div>
-                        <div class="bg-white rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-1">Diferença</p>
-                            <p class="text-xl md:text-2xl font-bold ${Math.abs(totalGeral - (fatura.agua + fatura.luz)) < 0.01 ? 'text-green-600' : 'text-red-600'}">
-                                ${(totalGeral - (fatura.agua + fatura.luz)).toFixed(2)} €
-                            </p>
-                        </div>
-                    </div>
-                    ${Math.abs(totalGeral - (fatura.agua + fatura.luz)) < 0.01 ? 
-                        '<p class="text-green-700 font-semibold mt-4 text-center">✔ Valores conferem!</p>' : 
-                        '<p class="text-red-700 font-semibold mt-4 text-center">⚠️ Diferença detectada!</p>'
-                    }
-                </div>
-            `;
-        }
-
-        function renderizar() {
-            document.getElementById('contador-principal-agua').innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">${dados.contadorPrincipalAgua.descricao}</p>
-                        <p class="text-sm text-gray-600">Contador geral da companhia</p>
-                    </div>
-                    <button onclick="editarContadorPrincipal('agua')" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">
-                        ✏️
-                    </button>
-                </div>
-            `;
-
-            document.getElementById('contador-principal-luz').innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">${dados.contadorPrincipalLuz.descricao}</p>
-                        <p class="text-sm text-gray-600">Contador geral da companhia</p>
-                    </div>
-                    <button onclick="editarContadorPrincipal('luz')" class="bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700">
-                        ✏️
-                    </button>
-                </div>
-            `;
-
-            document.getElementById('lista-agua').innerHTML = dados.contadoresAgua.map(c => {
-                if (editandoContadorAgua === c.id) {
-                    return `
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
-                            <input type="text" id="edit-agua-${c.id}" value="${c.descricao}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                            <div class="flex gap-2">
-                                <button onclick="salvarEdicaoContadorAgua(${c.id})" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">✓ Guardar</button>
-                                <button onclick="cancelarEdicaoAgua()" class="flex-1 sm:flex-none bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">✕ Cancelar</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                return `
-                    <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
-                        <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
-                        <div class="flex gap-2">
-                            <button onclick="editarContadorAgua(${c.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 text-xs md:text-sm">✏️</button>
-                            <button onclick="removerContadorAgua(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-xs md:text-sm">🗑️</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            document.getElementById('lista-luz').innerHTML = dados.contadoresLuz.map(c => {
-                if (editandoContadorLuz === c.id) {
-                    return `
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
-                            <input type="text" id="edit-luz-${c.id}" value="${c.descricao}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base">
-                            <div class="flex gap-2">
-                                <button onclick="salvarEdicaoContadorLuz(${c.id})" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">✓ Guardar</button>
-                                <button onclick="cancelarEdicaoLuz()" class="flex-1 sm:flex-none bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">✕ Cancelar</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                return `
-                    <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
-                        <span class="font-semibold text-gray-800 text-sm md:text-base">${c.descricao}</span>
-                        <div class="flex gap-2">
-                            <button onclick="editarContadorLuz(${c.id})" class="bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700 text-xs md:text-sm">✏️</button>
-                            <button onclick="removerContadorLuz(${c.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-xs md:text-sm">🗑️</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            if (dados.leituras.length > 0) {
-                document.getElementById('historico-leituras').innerHTML = `
-                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
-                    <div class="space-y-3">
-                        ${dados.leituras.map(l => {
-                            if (editandoLeitura && editandoLeitura.id === l.id) {
-                                return `
-                                    <div class="bg-white border-2 border-indigo-500 rounded-lg p-3 md:p-4">
-                                        <div class="mb-4">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Data</label>
-                                            <input type="date" value="${editandoLeitura.data}" onchange="editandoLeitura.data = this.value" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                        </div>
-                                        <div class="mb-4">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">🏠 Casa Principal</label>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <input type="number" step="1" value="${editandoLeitura.principalAgua}" onchange="editandoLeitura.principalAgua = parseInt(this.value)" class="px-3 py-2 border rounded" placeholder="Água">
-                                                <input type="number" step="1" value="${editandoLeitura.principalLuz}" onchange="editandoLeitura.principalLuz = parseInt(this.value)" class="px-3 py-2 border rounded" placeholder="Luz">
-                                            </div>
-                                        </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <p class="font-semibold text-blue-600 mb-3">Água Terrenos:</p>
-                                                ${editandoLeitura.agua.map((a, idx) => `
-                                                    <div class="mb-2">
-                                                        <label class="text-xs text-gray-600">${a.descricao}</label>
-                                                        <input type="number" step="1" value="${a.valor}" onchange="editandoLeitura.agua[${idx}].valor = parseInt(this.value)" class="w-full px-3 py-1 text-sm border rounded">
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                            <div>
-                                                <p class="font-semibold text-yellow-600 mb-3">Luz Terrenos:</p>
-                                                ${editandoLeitura.luz.map((lz, idx) => `
-                                                    <div class="mb-2">
-                                                        <label class="text-xs text-gray-600">${lz.descricao}</label>
-                                                        <input type="number" step="1" value="${lz.valor}" onchange="editandoLeitura.luz[${idx}].valor = parseInt(this.value)" class="w-full px-3 py-1 text-sm border rounded">
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="salvarEdicaoLeitura()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">✓ Guardar</button>
-                                            <button onclick="cancelarEdicaoLeitura()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700">✕ Cancelar</button>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                            return `
-                                <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div>
-                                            <p class="font-bold text-gray-800">${new Date(l.data).toLocaleDateString('pt-PT')}</p>
-                                            <p class="text-sm text-gray-600">Casa: ${l.principalAgua} / ${l.principalLuz}</p>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="editarLeitura(${l.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">✏️</button>
-                                            <button onclick="eliminarLeitura(${l.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
-                                        </div>
-                                    </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <p class="font-semibold text-blue-600 mb-2">Água Terrenos:</p>
-                                            ${l.agua.map(a => `<p class="text-gray-600">${a.descricao}: ${a.valor}</p>`).join('')}
-                                        </div>
-                                        <div>
-                                            <p class="font-semibold text-yellow-600 mb-2">Luz Terrenos:</p>
-                                            ${l.luz.map(lz => `<p class="text-gray-600">${lz.descricao}: ${lz.valor}</p>`).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-            }
-
-            if (dados.faturas.length > 0) {
-                document.getElementById('historico-faturas').innerHTML = `
-                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Histórico</h3>
-                    <div class="space-y-3 max-w-2xl mx-auto">
-                        ${dados.faturas.map(f => {
-                            if (editandoFatura && editandoFatura.id === f.id) {
-                                return `
-                                    <div class="bg-white border-2 border-indigo-500 rounded-lg p-3 md:p-4">
-                                        <div class="mb-4">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Mês</label>
-                                            <input type="month" value="${editandoFatura.mes}" onchange="editandoFatura.mes = this.value" class="w-full px-4 py-2 border rounded-lg">
-                                        </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Água (€)</label>
-                                                <input type="number" step="0.01" value="${editandoFatura.agua}" onchange="editandoFatura.agua = parseFloat(this.value)" class="w-full px-4 py-2 border rounded-lg">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Luz (€)</label>
-                                                <input type="number" step="0.01" value="${editandoFatura.luz}" onchange="editandoFatura.luz = parseFloat(this.value)" class="w-full px-4 py-2 border rounded-lg">
-                                            </div>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="salvarEdicaoFatura()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">✓ Guardar</button>
-                                            <button onclick="cancelarEdicaoFatura()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700">✕ Cancelar</button>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                            return `
-                                <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <p class="font-bold text-gray-800">${new Date(f.mes + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
-                                        <div class="flex gap-2">
-                                            <button onclick="editarFatura(${f.id})" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">✏️</button>
-                                            <button onclick="eliminarFatura(${f.id})" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">🗑️</button>
-                                        </div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4 text-sm">
-                                        <p class="text-gray-600">Água: ${f.agua.toFixed(2)} €</p>
-                                        <p class="text-gray-600">Luz: ${f.luz.toFixed(2)} €</p>
-                                    </div>
-                                    <p class="font-bold text-indigo-600 mt-2">Total: ${(f.agua + f.luz).toFixed(2)} €</p>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-            }
-        }
     </script>
 </body>
 </html>
