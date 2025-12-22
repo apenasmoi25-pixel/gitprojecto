@@ -163,7 +163,17 @@
 
                 <!-- TAB CALCULOS -->
                 <div id="content-calculos" class="hidden">
-                    <h2 class="text-xl font-bold mb-6">Cálculos</h2>
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
+                        <h2 class="text-xl font-bold">Cálculos</h2>
+                        <div class="flex gap-2">
+                            <button onclick="app.exportarCalculosCSV()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 flex items-center gap-2">
+                                📊 Exportar CSV
+                            </button>
+                            <button onclick="app.exportarCalculosPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 flex items-center gap-2">
+                                📄 Exportar PDF
+                            </button>
+                        </div>
+                    </div>
                     <div id="resultados-calculos"></div>
                 </div>
             </div>
@@ -309,6 +319,135 @@
                 a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
                 a.click();
                 this.toast('Exportado', 'sucesso');
+            },
+
+            exportarCalculosCSV() {
+                const sel = document.getElementById('select-mes-calculo');
+                if (!sel) {
+                    this.toast('Primeiro calcule um mês', 'aviso');
+                    return;
+                }
+
+                const mes = sel.value;
+                const resultado = this.obterDadosCalculo(mes);
+                if (!resultado) return;
+
+                const linhas = [
+                    ['Calculadora de Água e Luz - ' + new Date(mes + '-01').toLocaleDateString('pt-PT', {month: 'long', year: 'numeric'})],
+                    [''],
+                    ['CASA PRINCIPAL'],
+                    ['Tipo', 'Consumo', 'Unidade', 'Valor'],
+                    ['Água', resultado.cCasaAgua, 'm³', resultado.custoCasaAgua.toFixed(2) + '€'],
+                    ['Luz', resultado.cCasaLuz, 'kWh', resultado.custoCasaLuz.toFixed(2) + '€'],
+                    ['TOTAL CASA', '', '', resultado.custoCasaTotal.toFixed(2) + '€'],
+                    [''],
+                    ['TERRENOS'],
+                    ['Nome', 'Água (m³)', 'Custo Água (€)', 'Luz (kWh)', 'Custo Luz (€)', 'Total (€)']
+                ];
+
+                resultado.terrenos.forEach(t => {
+                    const consumoAgua = t.agua ? t.agua.consumo : 0;
+                    const custoAgua = t.agua ? t.agua.custo.toFixed(2) : '0.00';
+                    const consumoLuz = t.luz ? t.luz.consumo : 0;
+                    const custoLuz = t.luz ? t.luz.custo.toFixed(2) : '0.00';
+                    const total = ((t.agua ? t.agua.custo : 0) + (t.luz ? t.luz.custo : 0)).toFixed(2);
+                    linhas.push([t.descricao, consumoAgua, custoAgua, consumoLuz, custoLuz, total]);
+                });
+
+                linhas.push(['']);
+                linhas.push(['RESUMO']);
+                linhas.push(['Total Faturas', '', '', '', '', resultado.totalFaturas.toFixed(2) + '€']);
+                linhas.push(['Total Calculado', '', '', '', '', resultado.totalGeral.toFixed(2) + '€']);
+                linhas.push(['Diferença', '', '', '', '', (resultado.totalGeral - resultado.totalFaturas).toFixed(2) + '€']);
+
+                const csv = linhas.map(linha => linha.join(';')).join('\n');
+                const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `calculos-${mes}.csv`;
+                a.click();
+                this.toast('CSV exportado com sucesso', 'sucesso');
+            },
+
+            exportarCalculosPDF() {
+                const sel = document.getElementById('select-mes-calculo');
+                if (!sel) {
+                    this.toast('Primeiro calcule um mês', 'aviso');
+                    return;
+                }
+
+                const mes = sel.value;
+                const resultado = this.obterDadosCalculo(mes);
+                if (!resultado) return;
+
+                const mesFormatado = new Date(mes + '-01').toLocaleDateString('pt-PT', {month: 'long', year: 'numeric'});
+                
+                let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cálculos ${mesFormatado}</title><style>body{font-family:Arial,sans-serif;margin:40px}h1{color:#4F46E5;border-bottom:3px solid #4F46E5;padding-bottom:10px}h2{color:#6366F1;margin-top:30px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{padding:12px;text-align:left;border:1px solid #ddd}th{background-color:#4F46E5;color:white}tr:nth-child(even){background-color:#f9f9f9}.casa-principal{background-color:#E0E7FF;padding:20px;margin:20px 0;border-radius:8px}.total{font-weight:bold;background-color:#FEF3C7}.resumo{background-color:#F3F4F6;padding:15px;margin:20px 0;border-radius:8px}.valor-destaque{font-size:24px;font-weight:bold;color:#4F46E5}</style></head><body><h1>🏠 Calculadora de Água e Luz</h1><p><strong>Período:</strong> ${mesFormatado}</p><p><strong>Leituras:</strong> ${new Date(resultado.lAnt.data).toLocaleDateString('pt-PT')} até ${new Date(resultado.lAtu.data).toLocaleDateString('pt-PT')}</p><div class="casa-principal"><h2>🏠 CASA PRINCIPAL</h2><table><tr><th>Tipo</th><th>Consumo</th><th>Unidade</th><th>Valor</th></tr><tr><td>💧 Água</td><td>${resultado.cCasaAgua}</td><td>m³</td><td>${resultado.custoCasaAgua.toFixed(2)} €</td></tr><tr><td>⚡ Luz</td><td>${resultado.cCasaLuz}</td><td>kWh</td><td>${resultado.custoCasaLuz.toFixed(2)} €</td></tr><tr class="total"><td colspan="3"><strong>TOTAL CASA A PAGAR</strong></td><td><span class="valor-destaque">${resultado.custoCasaTotal.toFixed(2)} €</span></td></tr></table></div><h2>🏘️ TERRENOS</h2><table><tr><th>Nome</th><th>Água (m³)</th><th>Custo Água</th><th>Luz (kWh)</th><th>Custo Luz</th><th>Total</th></tr>${resultado.terrenos.map(t=>{const ca=t.agua?t.agua.consumo:'-';const csa=t.agua?t.agua.custo.toFixed(2)+' €':'-';const cl=t.luz?t.luz.consumo:'-';const csl=t.luz?t.luz.custo.toFixed(2)+' €':'-';const tot=((t.agua?t.agua.custo:0)+(t.luz?t.luz.custo:0)).toFixed(2);return`<tr><td><strong>${t.descricao}</strong></td><td>${ca}</td><td>${csa}</td><td>${cl}</td><td>${csl}</td><td><strong>${tot} €</strong></td></tr>`}).join('')}</table><div class="resumo"><h2>📊 VERIFICAÇÃO</h2><table><tr><td><strong>Total das Faturas</strong></td><td><strong>${resultado.totalFaturas.toFixed(2)} €</strong></td></tr><tr><td><strong>Total Calculado</strong></td><td><strong>${resultado.totalGeral.toFixed(2)} €</strong></td></tr><tr><td><strong>Diferença</strong></td><td><strong>${(resultado.totalGeral-resultado.totalFaturas).toFixed(2)} €</strong></td></tr></table></div><p style="text-align:center;color:#666;margin-top:40px;font-size:12px">Documento gerado em ${new Date().toLocaleString('pt-PT')}</p></body></html>`;
+
+                const janela = window.open('', '_blank');
+                janela.document.write(html);
+                janela.document.close();
+                setTimeout(() => { janela.print(); }, 500);
+                this.toast('PDF pronto para imprimir/guardar', 'sucesso');
+            },
+
+            obterDadosCalculo(mes) {
+                const fAgua = this.dados.faturasAgua.find(f => f.mes === mes);
+                const fLuz = this.dados.faturasLuz.find(f => f.mes === mes);
+                const leiturasOrd = [...this.dados.leituras].sort((a, b) => new Date(a.data) - new Date(b.data));
+                let lAnt = null, lAtu = null;
+                for (let i = 1; i < leiturasOrd.length; i++) {
+                    const ant = leiturasOrd[i - 1];
+                    const atu = leiturasOrd[i];
+                    const dAnt = new Date(ant.data);
+                    const dAtu = new Date(atu.data);
+                    const dMes = new Date(mes + '-01');
+                    if (dMes >= dAnt && dMes <= dAtu) {
+                        lAnt = ant;
+                        lAtu = atu;
+                        break;
+                    }
+                }
+                if (!lAnt || !lAtu) return null;
+                const cPrincipalAgua = lAtu.principalAgua - lAnt.principalAgua;
+                const cPrincipalLuz = lAtu.principalLuz - lAnt.principalLuz;
+                const consumosAgua = lAtu.agua.map(a => {
+                    const ant = lAnt.agua.find(x => x.contadorId === a.contadorId);
+                    return {descricao: a.descricao, consumo: a.valor - (ant ? ant.valor : 0)};
+                });
+                const consumosLuz = lAtu.luz.map(l => {
+                    const ant = lAnt.luz.find(x => x.contadorId === l.contadorId);
+                    return {descricao: l.descricao, consumo: l.valor - (ant ? ant.valor : 0)};
+                });
+                const somaAgua = consumosAgua.reduce((s, c) => s + c.consumo, 0);
+                const somaLuz = consumosLuz.reduce((s, c) => s + c.consumo, 0);
+                const cCasaAgua = cPrincipalAgua - somaAgua;
+                const cCasaLuz = cPrincipalLuz - somaLuz;
+                const custoCasaAgua = fAgua ? (cCasaAgua / cPrincipalAgua) * fAgua.valor : 0;
+                const custoCasaLuz = fLuz ? (cCasaLuz / cPrincipalLuz) * fLuz.valor : 0;
+                const custoCasaTotal = custoCasaAgua + custoCasaLuz;
+                const custosAgua = consumosAgua.map(c => ({...c, custo: fAgua ? (c.consumo / cPrincipalAgua) * fAgua.valor : 0}));
+                const custosLuz = consumosLuz.map(c => ({...c, custo: fLuz ? (c.consumo / cPrincipalLuz) * fLuz.valor : 0}));
+                const terrenosMap = new Map();
+                custosAgua.forEach(item => {
+                    terrenosMap.set(item.descricao, {descricao: item.descricao, agua: item, luz: null});
+                });
+                custosLuz.forEach(item => {
+                    if (terrenosMap.has(item.descricao)) {
+                        terrenosMap.get(item.descricao).luz = item;
+                    } else {
+                        terrenosMap.set(item.descricao, {descricao: item.descricao, agua: null, luz: item});
+                    }
+                });
+                const totalTerrenos = custosAgua.reduce((s, c) => s + c.custo, 0) + custosLuz.reduce((s, c) => s + c.custo, 0);
+                const totalGeral = totalTerrenos + custoCasaTotal;
+                const totalFaturas = (fAgua ? fAgua.valor : 0) + (fLuz ? fLuz.valor : 0);
+                return {
+                    lAnt, lAtu,
+                    cCasaAgua, cCasaLuz, custoCasaAgua, custoCasaLuz, custoCasaTotal,
+                    terrenos: Array.from(terrenosMap.values()),
+                    totalGeral, totalFaturas
+                };
             },
 
             atualizarInputsLeituras() {
@@ -560,7 +699,7 @@
                             </div>
                         </div>
                         ${fAgua && fLuz && Math.abs(totalGeral - totalFaturas) < 0.01 ? 
-                            '<p class="text-green-700 font-semibold mt-4 text-center">✔ Valores conferem!</p>' : 
+                            '<p class="text-green-700 font-semibold mt-4 text-center">✓ Valores conferem!</p>' : 
                             fAgua && fLuz ?
                             '<p class="text-red-700 font-semibold mt-4 text-center">⚠️ Diferença detectada!</p>' :
                             '<p class="text-orange-700 font-semibold mt-4 text-center">ℹ️ Registe ambas as faturas para verificação completa</p>'
@@ -1106,4 +1245,4 @@
         });
     </script>
 </body>
-</html>
+</html>   
